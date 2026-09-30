@@ -8,6 +8,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  const SUPABASE_URL = 'https://lxxjvoimflzoevrmpguy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_ZcbckNyWHEfwgxYNB-CFAw_kdjcIGGM';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
