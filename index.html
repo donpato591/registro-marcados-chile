@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Registro y Control de Aves</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Estilos adicionales para usabilidad táctil móvil */
+    .touch-btn {
+      touch-action: manipulation;
+    }
+    /* Estilo de scroll personalizado */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white antialiased pb-12">
+
+  <!-- ========================================== -->
+  <!-- BARRA SUPERIOR (HEADER)                   -->
+  <!-- ========================================== -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl border border-emerald-500/20">
+          <i data-lucide="feather" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">Control de Aves</h1>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span id="realtimeBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado
+            </span>
+            <span id="totalBadge" class="text-xs text-slate-400">Total: <b id="statTotal" class="text-slate-200">0</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón Principal "Agregar Ave" (Grande para móvil) -->
+      <button onclick="openAveModal()" class="touch-btn px-4 py-3 sm:px-5 sm:py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl text-sm sm:text-base shadow-lg shadow-emerald-950/60 transition flex items-center gap-2 cursor-pointer">
+        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+        <span>Agregar Ave</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-6xl w-full mx-auto px-4 py-5 space-y-6 flex-1">
+
+    <!-- ========================================== -->
+    <!-- 4. VERIFICADOR DE PLACAS (BUSCADOR ARRIBA) -->
+    <!-- ========================================== -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-base sm:text-lg">
+          <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+          <h2>Verificador de Placas (Búsqueda General)</h2>
+        </div>
+        <span class="text-xs text-slate-400">Coincidencia parcial (ilike) y sin mayúsculas</span>
+      </div>
+
+      <!-- Input de búsqueda grande con botón de limpiar -->
+      <div class="relative">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+        <input
+          type="text"
+          id="verifierInput"
+          placeholder="Escribe o escanea un código de placa..."
+          autocomplete="off"
+          class="w-full bg-slate-950 border-2 border-slate-700 hover:border-slate-600 focus:border-emerald-500 rounded-xl pl-12 pr-12 py-3.5 text-base sm:text-lg text-white font-mono placeholder:font-sans placeholder:text-slate-500 focus:outline-none transition shadow-inner"
+        />
+        <button
+          id="btnClearVerifier"
+          onclick="clearVerifier()"
+          class="hidden absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white rounded-lg transition touch-btn"
+          title="Limpiar"
+        >
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Resultado del Verificador -->
+      <div id="verifierResult" class="hidden"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. RESUMEN POR CORRAL                     -->
+    <!-- ========================================== -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-indigo-400 font-semibold text-base sm:text-lg">
+          <i data-lucide="layout-grid" class="w-5 h-5"></i>
+          <h2>Resumen por Corral</h2>
+        </div>
+        <span class="text-xs text-slate-400" id="corralCountLabel">0 corrales activos</span>
+      </div>
+
+      <!-- Grid de tarjetas de corrales -->
+      <div id="corralCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <!-- Generado dinámicamente con JS -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 5. LISTADO DE AVES CON FILTROS            -->
+    <!-- ========================================== -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+      
+      <!-- Encabezado y Filtros Selectores -->
+      <div class="space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2 text-white font-semibold text-base sm:text-lg">
+            <i data-lucide="list-filter" class="w-5 h-5 text-emerald-400"></i>
+            <h2>Listado de Registros</h2>
+          </div>
+          <button onclick="resetFilters()" class="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition self-start sm:self-auto touch-btn">
+            Limpiar todos los filtros
+          </button>
+        </div>
+
+        <!-- 3 Filtros Desplegables Grandes para Celular -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Filtro Corral -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Filtrar Corral</label>
+            <select id="filterCorral" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+              <option value="">Todos los corrales</option>
+            </select>
+          </div>
+
+          <!-- Filtro Comuna -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Filtrar Comuna</label>
+            <select id="filterComuna" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+              <option value="">Todas las comunas</option>
+            </select>
+          </div>
+
+          <!-- Filtro Responsable -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Filtrar Responsable</label>
+            <select id="filterResponsable" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+              <option value="">Todos los responsables</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjetas / Lista para Móvil y Tabla para Computador -->
+      <div id="avesContainer" class="space-y-3">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE AGREGAR / EDITAR AVE (BOTONES GRANDES) -->
+  <!-- ========================================== -->
+  <div id="aveModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="feather" id="modalIcon" class="w-6 h-6 text-emerald-400"></i>
+          <h3 id="modalTitle" class="text-lg sm:text-xl font-bold text-white">Registrar Nueva Ave</h3>
+        </div>
+        <button onclick="closeAveModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Alerta interna del modal (Error clave duplicada, validaciones) -->
+      <div id="modalAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <form id="aveForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        
+        <!-- Placa (Obligatorio, PK) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Código de Placa <span class="text-rose-400">* (Obligatorio)</span>
+          </label>
+          <input
+            type="text"
+            id="inputPlaca"
+            required
+            placeholder="Ej: PL-2026-001"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-base text-white font-mono uppercase focus:outline-none focus:border-emerald-500 transition disabled:opacity-50 disabled:bg-slate-800"
+          />
+          <p id="inputPlacaHelp" class="text-xs text-slate-400 mt-1">Identificador único irrepetible.</p>
+        </div>
+
+        <!-- Fechas -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Fecha Marcaje</label>
+            <input
+              type="date"
+              id="inputFechaMarcaje"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Fecha Nacimiento</label>
+            <input
+              type="date"
+              id="inputFechaNacimiento"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <!-- Responsable -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Responsable</label>
+          <input
+            type="text"
+            id="inputResponsable"
+            placeholder="Ej: Juan Pérez"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <!-- Comuna y Corral -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Comuna</label>
+            <input
+              type="text"
+              id="inputComuna"
+              placeholder="Ej: Melipilla"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Corral</label>
+            <input
+              type="text"
+              id="inputCorral"
+              placeholder="Ej: Corral 1 / Sector A"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <!-- Botones de Acción Grandes -->
+        <div class="pt-3 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeAveModal()"
+            class="touch-btn w-full sm:w-1/3 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnSubmitModal"
+            class="touch-btn w-full sm:w-2/3 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-base shadow-lg shadow-emerald-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="save" class="w-5 h-5"></i>
+            <span id="btnSubmitText">Guardar Ave</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT PURO (VANILLA JS + SUPABASE)    -->
+  <!-- ========================================== -->
+  <script>
+    // =========================================================================
+    // PEGA AQUÍ TUS CREDENCIALES DE SUPABASE:
+    // =========================================================================
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY";
+    // =========================================================================
+
+    // Variables de Estado de la Aplicación
+    let supabaseClient = null;
+    let realtimeChannel = null;
+    let avesData = [];         // Fuente de verdad cargada y sincronizada desde Supabase
+    let editingPlaca = null;   // Modo edición si contiene la placa
+
+    // Inicialización al cargar el DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initApp();
+    });
+
+    async function initApp() {
+      if (!SUPABASE_URL || SUPABASE_URL.includes("TU_PROYECTO") || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes("TU_SUPABASE_ANON_KEY")) {
+        showConfigWarning();
+        return;
+      }
+
+      try {
+        // Inicializar cliente Supabase oficial
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // 1. Cargar datos iniciales desde Supabase
+        await fetchAvesFromSupabase();
+
+        // 2. Suscribir a cambios en tiempo real
+        setupRealtimeSubscription();
+
+        // 3. Listener para el Verificador de Placas (Buscador instantáneo)
+        document.getElementById('verifierInput').addEventListener('input', (e) => {
+          handleVerifierSearch(e.target.value);
+        });
+
+      } catch (err) {
+        console.error("Error inicializando Supabase:", err);
+        updateStatusBadge(false, "Error de conexión");
+      }
+    }
+
+    function showConfigWarning() {
+      const container = document.getElementById('avesContainer');
+      container.innerHTML = `
+        <div class="bg-amber-950/60 border-2 border-amber-600/60 rounded-2xl p-6 text-center text-amber-200 space-y-3">
+          <i data-lucide="alert-triangle" class="w-10 h-10 mx-auto text-amber-400"></i>
+          <h3 class="text-lg font-bold text-white">Configuración requerida</h3>
+          <p class="text-sm max-w-lg mx-auto">
+            Por favor abre el archivo <code>index.html</code> en un editor de texto y reemplaza 
+            <b>SUPABASE_URL</b> y <b>SUPABASE_ANON_KEY</b> por las credenciales de tu proyecto de Supabase.
+          </p>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // 2. SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
+    // =========================================================================
+    function setupRealtimeSubscription() {
+      if (!supabaseClient) return;
+
+      if (realtimeChannel) {
+        supabaseClient.removeChannel(realtimeChannel);
+      }
+
+      realtimeChannel = supabaseClient
+        .channel('public:aves:cambios')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'aves' },
+          (payload) => {
+            console.log('Evento Realtime recibido:', payload);
+            handleRealtimeEvent(payload);
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            updateStatusBadge(true, "Sincronizado");
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            updateStatusBadge(false, "Desconectado");
+          }
+        });
+    }
+
+    function handleRealtimeEvent(payload) {
+      const { eventType, new: newRow, old: oldRow } = payload;
+
+      if (eventType === 'INSERT') {
+        // Añadir si no existe ya
+        if (!avesData.some(a => a.placa === newRow.placa)) {
+          avesData.unshift(newRow);
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = avesData.findIndex(a => a.placa === newRow.placa);
+        if (idx !== -1) {
+          avesData[idx] = newRow;
+        } else {
+          avesData.unshift(newRow);
+        }
+      } else if (eventType === 'DELETE') {
+        avesData = avesData.filter(a => a.placa !== oldRow.placa);
+      }
+
+      // Re-renderizar toda la interfaz con los datos actualizados
+      renderAll();
+
+      // Si el verificador de placas tiene texto activo, recalcularlo
+      const currentVerifierQuery = document.getElementById('verifierInput').value;
+      if (currentVerifierQuery.trim()) {
+        handleVerifierSearch(currentVerifierQuery);
+      }
+    }
+
+    async function fetchAvesFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('aves')
+          .select('*')
+          .order('creado_en', { ascending: false });
+
+        if (error) throw error;
+        avesData = data || [];
+        renderAll();
+      } catch (err) {
+        console.error("Error al obtener datos:", err);
+      }
+    }
+
+    function updateStatusBadge(isOnline, text) {
+      const badge = document.getElementById('realtimeBadge');
+      if (isOnline) {
+        badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/60";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ${text}`;
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-950/80 text-rose-400 border border-rose-800/60";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> ${text}`;
+      }
+    }
+
+    // =========================================================================
+    // RENDERIZADO GLOBAL (SIEMPRE DESDE Supabase / avesData)
+    // =========================================================================
+    function renderAll() {
+      document.getElementById('statTotal').textContent = avesData.length;
+      renderCorralSummary();
+      populateFilterOptions();
+      renderAvesList();
+    }
+
+    // =========================================================================
+    // 3. RESUMEN POR CORRAL (Cálculo dinámico en memoria)
+    // =========================================================================
+    function renderCorralSummary() {
+      const container = document.getElementById('corralCardsContainer');
+      const countLabel = document.getElementById('corralCountLabel');
+
+      if (!avesData || avesData.length === 0) {
+        container.innerHTML = `<p class="col-span-full text-xs text-slate-500 py-2">Sin datos de corrales aún.</p>`;
+        countLabel.textContent = "0 corrales";
+        return;
+      }
+
+      // Agrupar y contar registros por corral
+      const corralCounts = {};
+      avesData.forEach(ave => {
+        const c = (ave.corral || '').trim() || 'Sin Corral';
+        corralCounts[c] = (corralCounts[c] || 0) + 1;
+      });
+
+      const uniqueCorrales = Object.keys(corralCounts).sort();
+      countLabel.textContent = `${uniqueCorrales.length} ${uniqueCorrales.length === 1 ? 'corral' : 'corrales'}`;
+
+      container.innerHTML = uniqueCorrales.map(corralName => {
+        const count = corralCounts[corralName];
+        return `
+          <div onclick="filterByCorralCard('${escapeHtml(corralName)}')" class="bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-xl transition cursor-pointer flex flex-col justify-between touch-btn group">
+            <span class="text-xs font-semibold text-slate-400 group-hover:text-indigo-300 truncate" title="${escapeHtml(corralName)}">
+              ${escapeHtml(corralName)}
+            </span>
+            <div class="mt-2 flex items-baseline justify-between">
+              <span class="text-2xl font-black text-indigo-400">${count}</span>
+              <span class="text-[10px] text-slate-500 uppercase font-medium">aves</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterByCorralCard(corralName) {
+      const select = document.getElementById('filterCorral');
+      select.value = corralName === 'Sin Corral' ? 'Sin Corral' : corralName;
+      applyFilters();
+      window.scrollTo({ top: document.getElementById('avesContainer').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    // =========================================================================
+    // 4. VERIFICADOR DE PLACAS (ILIKE / PARCIAL Y SIN DISTINGUIR MAYÚSCULAS)
+    // =========================================================================
+    function handleVerifierSearch(rawQuery) {
+      const query = rawQuery.trim().toLowerCase();
+      const resultBox = document.getElementById('verifierResult');
+      const btnClear = document.getElementById('btnClearVerifier');
+
+      if (!query) {
+        resultBox.classList.add('hidden');
+        resultBox.innerHTML = '';
+        btnClear.classList.add('hidden');
+        return;
+      }
+
+      btnClear.classList.remove('hidden');
+      resultBox.classList.remove('hidden');
+
+      // Buscar aves cuya placa contenga la subcadena (ilike simulado sobre datos en memoria)
+      const matches = avesData.filter(ave => (ave.placa || '').toLowerCase().includes(query));
+
+      if (matches.length === 0) {
+        resultBox.innerHTML = `
+          <div class="p-4 bg-rose-950/40 border-2 border-rose-700/60 rounded-xl text-rose-300 flex items-center gap-3 animate-in fade-in duration-150">
+            <i data-lucide="alert-circle" class="w-6 h-6 shrink-0 text-rose-400"></i>
+            <div>
+              <p class="text-base font-bold text-white">Placa "${escapeHtml(rawQuery)}" no registrada</p>
+              <p class="text-xs text-rose-300/80">No se encontró ningún registro que coincida con esta búsqueda.</p>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      // Si encuentra una o varias coincidencias
+      resultBox.innerHTML = `
+        <div class="space-y-2 animate-in fade-in duration-150">
+          <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+            ${matches.length} ${matches.length === 1 ? 'coincidencia encontrada' : 'coincidencias encontradas'}:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${matches.map(ave => `
+              <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-2">
+                <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2">
+                  <span class="text-xl font-black font-mono text-emerald-400 tracking-wider">${escapeHtml(ave.placa)}</span>
+                  <div class="flex gap-1.5">
+                    <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition touch-btn flex items-center gap-1">
+                      <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
+                    </button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-1">
+                  <div><span class="text-slate-500 block">F. Marcaje:</span> <b class="text-slate-200">${ave.fecha_marcaje || '-'}</b></div>
+                  <div><span class="text-slate-500 block">F. Nacimiento:</span> <b class="text-slate-200">${ave.fecha_nacimiento || '-'}</b></div>
+                  <div><span class="text-slate-500 block">Responsable:</span> <b class="text-slate-200">${escapeHtml(ave.responsable || '-')}</b></div>
+                  <div><span class="text-slate-500 block">Ubicación:</span> <b class="text-slate-200">${escapeHtml(ave.comuna || '-')}${ave.corral ? ' / ' + escapeHtml(ave.corral) : ''}</b></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function clearVerifier() {
+      const input = document.getElementById('verifierInput');
+      input.value = '';
+      handleVerifierSearch('');
+      input.focus();
+    }
+
+    // =========================================================================
+    // 5. FILTROS Y LISTADO DE REGISTROS
+    // =========================================================================
+    function populateFilterOptions() {
+      const selectCorral = document.getElementById('filterCorral');
+      const selectComuna = document.getElementById('filterComuna');
+      const selectResp = document.getElementById('filterResponsable');
+
+      const curCorral = selectCorral.value;
+      const curComuna = selectComuna.value;
+      const curResp = selectResp.value;
+
+      // Obtener valores únicos
+      const corrales = new Set();
+      const comunas = new Set();
+      const responsables = new Set();
+
+      avesData.forEach(a => {
+        if (a.corral) corrales.add(a.corral.trim());
+        if (a.comuna) comunas.add(a.comuna.trim());
+        if (a.responsable) responsables.add(a.responsable.trim());
+      });
+
+      populateSelect(selectCorral, ['Todos los corrales', ...Array.from(corrales).sort()], curCorral);
+      populateSelect(selectComuna, ['Todas las comunas', ...Array.from(comunas).sort()], curComuna);
+      populateSelect(selectResp, ['Todos los responsables', ...Array.from(responsables).sort()], curResp);
+    }
+
+    function populateSelect(selectEl, options, currentValue) {
+      selectEl.innerHTML = options.map((opt, i) => {
+        const val = i === 0 ? '' : opt;
+        const selected = val === currentValue ? 'selected' : '';
+        return `<option value="${escapeHtml(val)}" ${selected}>${escapeHtml(opt)}</option>`;
+      }).join('');
+    }
+
+    function applyFilters() {
+      renderAvesList();
+    }
+
+    function resetFilters() {
+      document.getElementById('filterCorral').value = '';
+      document.getElementById('filterComuna').value = '';
+      document.getElementById('filterResponsable').value = '';
+      renderAvesList();
+    }
+
+    function renderAvesList() {
+      const container = document.getElementById('avesContainer');
+      const filterCorral = document.getElementById('filterCorral').value.trim();
+      const filterComuna = document.getElementById('filterComuna').value.trim();
+      const filterResp = document.getElementById('filterResponsable').value.trim();
+
+      // Filtrar arreglo
+      const filtered = avesData.filter(ave => {
+        if (filterCorral && (ave.corral || '').trim() !== filterCorral) return false;
+        if (filterComuna && (ave.comuna || '').trim() !== filterComuna) return false;
+        if (filterResp && (ave.responsable || '').trim() !== filterResp) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-slate-950/60 rounded-xl border border-slate-800 text-slate-400 space-y-2">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-500"></i>
+            <p class="text-sm font-medium">No hay registros que coincidan con los filtros seleccionados.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      // Renderizado en formato tarjetas (Cards táctiles muy amigables para celular y ordenadas en PC)
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${filtered.map(ave => `
+            <div class="bg-slate-950 border border-slate-800 hover:border-slate-700 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-md">
+              <div class="space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-lg font-bold font-mono text-emerald-400 uppercase tracking-wide">
+                    ${escapeHtml(ave.placa)}
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                    ${escapeHtml(ave.corral || 'Sin Corral')}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-1">
+                  <div>
+                    <span class="text-slate-500 block">F. Marcaje:</span>
+                    <span class="font-medium text-slate-200">${ave.fecha_marcaje || '-'}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">F. Nacimiento:</span>
+                    <span class="font-medium text-slate-200">${ave.fecha_nacimiento || '-'}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">Responsable:</span>
+                    <span class="font-medium text-slate-200 truncate block">${escapeHtml(ave.responsable || '-')}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">Comuna:</span>
+                    <span class="font-medium text-slate-200 truncate block">${escapeHtml(ave.comuna || '-')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones Grandes para Celular -->
+              <div class="pt-2 border-t border-slate-900 flex items-center justify-end gap-2">
+                <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="touch-btn flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i> Editar
+                </button>
+                <button onclick="deleteAve('${escapeHtml(ave.placa)}')" class="touch-btn py-2 px-3 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-rose-800/40">
+                  <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // 1. CRUD Y MODAL (VALIDACIÓN + ERROR CLAVE DUPLICADA)
+    // =========================================================================
+    function openAveModal() {
+      editingPlaca = null;
+      document.getElementById('aveForm').reset();
+      document.getElementById('inputPlaca').disabled = false;
+      document.getElementById('modalTitle').textContent = 'Registrar Nueva Ave';
+      document.getElementById('btnSubmitText').textContent = 'Guardar Ave';
+      document.getElementById('inputPlacaHelp').textContent = 'Identificador único irrepetible.';
+      
+      // Sugerir fecha de hoy
+      document.getElementById('inputFechaMarcaje').value = new Date().toISOString().split('T')[0];
+      
+      hideModalAlert();
+      document.getElementById('aveModal').classList.remove('hidden');
+      document.getElementById('inputPlaca').focus();
+      lucide.createIcons();
+    }
+
+    function closeAveModal() {
+      document.getElementById('aveModal').classList.add('hidden');
+      editingPlaca = null;
+    }
+
+    function startEdit(placa) {
+      const ave = avesData.find(a => a.placa === placa);
+      if (!ave) return;
+
+      editingPlaca = ave.placa;
+      document.getElementById('inputPlaca').value = ave.placa;
+      document.getElementById('inputPlaca').disabled = true; // La clave primaria no se altera
+      document.getElementById('inputFechaMarcaje').value = ave.fecha_marcaje || '';
+      document.getElementById('inputFechaNacimiento').value = ave.fecha_nacimiento || '';
+      document.getElementById('inputResponsable').value = ave.responsable || '';
+      document.getElementById('inputComuna').value = ave.comuna || '';
+      document.getElementById('inputCorral').value = ave.corral || '';
+
+      document.getElementById('modalTitle').textContent = 'Editar Registro';
+      document.getElementById('btnSubmitText').textContent = 'Actualizar Ave';
+      document.getElementById('inputPlacaHelp').textContent = 'La clave primaria (Placa) no se puede modificar.';
+      
+      hideModalAlert();
+      document.getElementById('aveModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+      if (!supabaseClient) {
+        showModalAlert('No hay conexión con Supabase. Revisa las credenciales.', 'error');
+        return;
+      }
+
+      const placa = document.getElementById('inputPlaca').value.trim().toUpperCase();
+      
+      // Validación obligatoria de placa
+      if (!placa) {
+        showModalAlert('El código de placa es obligatorio.', 'error');
+        return;
+      }
+
+      const payload = {
+        placa: placa,
+        fecha_marcaje: document.getElementById('inputFechaMarcaje').value || null,
+        fecha_nacimiento: document.getElementById('inputFechaNacimiento').value || null,
+        responsable: document.getElementById('inputResponsable').value.trim() || null,
+        comuna: document.getElementById('inputComuna').value.trim() || null,
+        corral: document.getElementById('inputCorral').value.trim() || null
+      };
+
+      const btnSubmit = document.getElementById('btnSubmitModal');
+      btnSubmit.disabled = true;
+      document.getElementById('btnSubmitText').textContent = 'Guardando en Supabase...';
+
+      try {
+        if (editingPlaca) {
+          // ACTUALIZAR (UPDATE)
+          const { error } = await supabaseClient
+            .from('aves')
+            .update(payload)
+            .eq('placa', editingPlaca);
+
+          if (error) throw error;
+          closeAveModal();
+        } else {
+          // INSERTAR (INSERT)
+          const { error } = await supabaseClient
+            .from('aves')
+            .insert([payload]);
+
+          if (error) {
+            // Error 23505 = Clave primaria duplicada en PostgreSQL
+            if (error.code === '23505') {
+              throw new Error(`¡La placa "${placa}" YA EXISTE! No se permiten placas duplicadas.`);
+            }
+            throw error;
+          }
+          closeAveModal();
+        }
+      } catch (err) {
+        console.error("Error en operación CRUD:", err);
+        showModalAlert(err.message || 'Error al guardar el registro.', 'error');
+      } finally {
+        btnSubmit.disabled = false;
+        document.getElementById('btnSubmitText').textContent = editingPlaca ? 'Actualizar Ave' : 'Guardar Ave';
+      }
+    }
+
+    async function deleteAve(placa) {
+      if (!confirm(`¿Confirmas que deseas eliminar el ave con placa "${placa}"?`)) {
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('aves')
+          .delete()
+          .eq('placa', placa);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Error al eliminar ave:", err);
+        alert('Error al eliminar: ' + (err.message || err));
+      }
+    }
+
+    function showModalAlert(msg, type = 'error') {
+      const alertBox = document.getElementById('modalAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = type === 'error'
+        ? 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200'
+        : 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-emerald-950/80 border border-emerald-700/60 text-emerald-200';
+      
+      alertBox.innerHTML = `
+        <i data-lucide="${type === 'error' ? 'alert-octagon' : 'check-circle'}" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <span>${escapeHtml(msg)}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideModalAlert() {
+      document.getElementById('modalAlert').classList.add('hidden');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
