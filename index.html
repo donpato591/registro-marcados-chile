@@ -10,6 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsPDF & AutoTable CDN (cdnjs.cloudflare.com) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* Estilos adicionales para usabilidad táctil móvil */
     .touch-btn {
@@ -81,15 +84,39 @@
         </button>
       </div>
     </div>
+
+    <!-- Navegación de Pestañas (Tabs) -->
+    <div class="max-w-6xl mx-auto px-4 mt-2 border-t border-slate-800/80 pt-2 flex items-center gap-2">
+      <button
+        id="tabBtnRegistro"
+        onclick="switchTab('registro')"
+        class="touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
+      >
+        <i data-lucide="feather" class="w-4 h-4"></i>
+        <span>Registro de Aves</span>
+      </button>
+
+      <button
+        id="tabBtnBaloteo"
+        onclick="switchTab('baloteo')"
+        class="touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
+      >
+        <i data-lucide="scale" class="w-4 h-4 text-amber-400"></i>
+        <span>Módulo de Baloteo</span>
+        <span id="baloteoBadgeCount" class="hidden px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">0</span>
+      </button>
+    </div>
   </header>
 
   <!-- CONTENEDOR PRINCIPAL -->
   <main class="max-w-6xl w-full mx-auto px-4 py-5 space-y-6 flex-1">
 
     <!-- ========================================== -->
-    <!-- 4. VERIFICADOR DE PLACAS (BUSCADOR ARRIBA) -->
+    <!-- PESTAÑA 1: REGISTRO DE AVES                -->
     <!-- ========================================== -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+    <div id="tabContentRegistro" class="space-y-6">
+      <!-- 4. VERIFICADOR DE PLACAS (BUSCADOR ARRIBA) -->
+      <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div class="flex items-center gap-2 text-emerald-400 font-semibold text-base sm:text-lg">
           <i data-lucide="scan-barcode" class="w-5 h-5"></i>
@@ -190,6 +217,304 @@
         <!-- Renderizado dinámicamente -->
       </div>
     </section>
+    </div> <!-- FIN TAB REGISTRO -->
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 2: MÓDULO DE BALOTEO               -->
+    <!-- ========================================== -->
+    <div id="tabContentBaloteo" class="hidden space-y-6">
+
+      <!-- 1. ENCABEZADO Y FORMULARIO DE PESAJE -->
+      <section id="baloteoPesajeFormContainer" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2 text-amber-400 font-semibold text-base sm:text-lg">
+            <i data-lucide="scale" class="w-5 h-5"></i>
+            <h2>Pesaje e Ingreso a Baloteo</h2>
+          </div>
+          <span class="text-xs text-slate-400">1 Libra = 16 Onzas | Guarda internamente en Onzas</span>
+        </div>
+
+        <form id="baloteoPesajeForm" onsubmit="handleBaloteoPesajeSubmit(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            
+            <!-- Placa (Selector o Auto-completado de Aves) -->
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Placa Marcaje Nacional <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="baloteoInputPlaca"
+                  list="baloteoPlacasDatalist"
+                  oninput="handleBaloteoPlacaInput(this.value)"
+                  placeholder="Ej: PL-2026-001"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-mono uppercase focus:outline-none focus:border-amber-500 transition"
+                />
+                <datalist id="baloteoPlacasDatalist"></datalist>
+              </div>
+            </div>
+
+            <!-- Placa Corral (Opcional) -->
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Placa Corral <span class="text-slate-500 text-[10px] font-normal">(Opcional)</span>
+              </label>
+              <input
+                type="text"
+                id="baloteoInputPlacaCorral"
+                placeholder="Ej: C-42"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-mono uppercase focus:outline-none focus:border-amber-500 transition"
+              />
+            </div>
+
+            <!-- Categoría (Solo Marcados Chile, Cresta y Barba Libre, Gallos) -->
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Categoría <span class="text-rose-400">*</span>
+              </label>
+              <select
+                id="baloteoInputCategoria"
+                required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition"
+              >
+                <option value="Marcados Chile">Marcados Chile</option>
+                <option value="Cresta y Barba Libre">Cresta y Barba Libre</option>
+                <option value="Gallos">Gallos</option>
+              </select>
+            </div>
+
+            <!-- Corral -->
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Corral <span class="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                id="baloteoInputCorral"
+                required
+                placeholder="Nombre del corral"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition"
+              />
+            </div>
+
+            <!-- Comuna o Ciudad (Opcional) -->
+            <div class="space-y-1 sm:col-span-2 lg:col-span-4">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Ciudad o Comuna <span class="text-slate-500 text-[10px] font-normal">(Opcional)</span>
+              </label>
+              <input
+                type="text"
+                id="baloteoInputComuna"
+                placeholder="Ej: Melipilla, Talca, etc."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition"
+              />
+            </div>
+          </div>
+
+          <!-- Pesaje: Libras y Onzas -->
+          <div class="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider shrink-0">
+                Peso:
+              </span>
+              
+              <div class="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  id="baloteoInputLibras"
+                  min="0"
+                  max="20"
+                  placeholder="3"
+                  required
+                  oninput="updateBaloteoCalculatedOunces()"
+                  class="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-center text-base font-bold text-white focus:outline-none focus:border-amber-500 transition"
+                />
+                <span class="text-xs text-slate-400 font-medium">lb</span>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  id="baloteoInputOnzas"
+                  min="0"
+                  max="15"
+                  placeholder="15"
+                  required
+                  oninput="updateBaloteoCalculatedOunces()"
+                  class="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-center text-base font-bold text-white focus:outline-none focus:border-amber-500 transition"
+                />
+                <span class="text-xs text-slate-400 font-medium">oz</span>
+              </div>
+
+              <div class="px-3 py-1.5 bg-amber-950/40 border border-amber-800/40 rounded-xl text-xs font-mono text-amber-300">
+                Total: <b id="baloteoCalculatedOzLabel" class="text-sm font-bold text-amber-200">0</b> oz (<span id="baloteoCalculatedFormattedLabel">0:00</span>)
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                type="submit"
+                class="touch-btn flex-1 sm:flex-none px-5 py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50"
+              >
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span id="baloteoBtnSubmitText">Ingresar a Baloteo</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- 2. CONTROL DEL BALOTEO Y LISTA DE AVES INGRESADAS -->
+      <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2 text-white font-semibold text-base sm:text-lg">
+              <i data-lucide="list-ordered" class="w-5 h-5 text-amber-400"></i>
+              <h2>Aves Pesadas en Espera</h2>
+            </div>
+            <span id="baloteoTotalPesadasBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60">
+              0 aves
+            </span>
+          </div>
+
+          <!-- Acciones de Baloteo y Switch de Comuna -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <!-- Interruptor Evitar Misma Comuna -->
+            <label class="inline-flex items-center gap-2 cursor-pointer bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs text-slate-300 select-none hover:border-slate-700 transition">
+              <input
+                type="checkbox"
+                id="baloteoSwitchEvitarComuna"
+                checked
+                class="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700 focus:ring-emerald-500 focus:ring-offset-slate-950"
+              />
+              <span>Evitar misma comuna/ciudad</span>
+            </label>
+
+            <button
+              onclick="ejecutarPactadoAutomatico()"
+              class="touch-btn px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-emerald-950/50"
+            >
+              <i data-lucide="swords" class="w-4 h-4"></i>
+              <span>Pactar Automáticamente</span>
+            </button>
+            <button
+              onclick="limpiarTodoBaloteo()"
+              class="touch-btn px-3 py-2 bg-slate-800 hover:bg-rose-950/60 hover:border-rose-800 text-slate-400 hover:text-rose-300 border border-slate-700 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5"
+              title="Borrar lista de pesaje"
+            >
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <span>Limpiar Todo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla / Lista de Aves Pesadas -->
+        <div id="baloteoPesadasContainer" class="space-y-2">
+          <!-- Renderizado dinámicamente -->
+        </div>
+      </section>
+
+      <!-- 3. RESULTADOS DEL PACTADO (AUTOMÁTICO O MANUAL) -->
+      <section id="baloteoResultadosSection" class="hidden space-y-6">
+        
+        <!-- Tarjeta de Peleas Pactadas -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-base sm:text-lg">
+              <i data-lucide="swords" class="w-5 h-5"></i>
+              <h2>Enfrentamientos Pactados</h2>
+              <span id="baloteoPactadosCountBadge" class="text-xs font-semibold px-2.5 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full ml-1">
+                0 peleas
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Botón Generar PDF Pactados -->
+              <button
+                onclick="generarPDFPactados()"
+                class="touch-btn px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-semibold rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
+                title="Generar PDF y Compartir por WhatsApp"
+              >
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Generar PDF / Compartir</span>
+              </button>
+
+              <!-- Botón Crear Pacto Manual (Solo Admin) -->
+              <button
+                id="btnOpenCrearPactoManual"
+                onclick="openCrearPactoManualModal()"
+                class="touch-btn px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow-md shadow-indigo-950/40"
+              >
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Crear Pacto Manual</span>
+              </button>
+
+              <button
+                onclick="limpiarResultadosPactado()"
+                class="touch-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition border border-slate-700"
+              >
+                Limpiar Pactos
+              </button>
+            </div>
+          </div>
+
+          <div id="baloteoPactadosContainer" class="space-y-3">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- 4. TABLA DE POSICIONES Y RANKING DE CORRALES -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-amber-400 font-bold text-base sm:text-lg">
+              <i data-lucide="trophy" class="w-5 h-5"></i>
+              <h2>Ranking y Resultados por Corral</h2>
+            </div>
+            
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs text-slate-400 mr-1 hidden sm:inline">Ganada = 3 pts | Tabla = 1 pt</span>
+              <button
+                onclick="generarPDFRanking()"
+                class="touch-btn px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-semibold rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow-md shadow-amber-950/40"
+                title="Generar PDF del Ranking de Corrales y Compartir"
+              >
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>PDF Ranking / Compartir</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="baloteoRankingContainer" class="overflow-x-auto">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- Tarjeta de Aves Sin Pactar -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-rose-400 font-bold text-base sm:text-lg">
+              <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              <h2>Aves Sin Pareja / Sin Pactar</h2>
+            </div>
+            <span id="baloteoSinPactarCountBadge" class="text-xs font-semibold px-2.5 py-1 bg-rose-950 text-rose-300 border border-rose-800 rounded-full">
+              0 aves
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-400">
+            Aves que no encontraron rival por peso fuera de tolerancia, por pertenecer al mismo corral o a la misma comuna. Puedes pactarlas manualmente con el botón "Crear Pacto Manual" o reubicarlas.
+          </p>
+
+          <div id="baloteoSinPactarContainer" class="space-y-2">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+
+      </section>
+
+    </div> <!-- FIN TAB BALOTEO -->
 
   </main>
 
@@ -595,6 +920,149 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- MODAL: CREAR PACTO MANUAL (ADMIN)          -->
+  <!-- ========================================== -->
+  <div id="crearPactoManualModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="swords" class="w-6 h-6 text-indigo-400"></i>
+          <h3 class="text-lg sm:text-xl font-bold text-white">Crear Pacto Manual</h3>
+        </div>
+        <button onclick="closeCrearPactoManualModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="crearPactoManualAlert" class="hidden p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5"></div>
+
+      <form id="crearPactoManualForm" onsubmit="handleCrearPactoManualSubmit(event)" class="space-y-4">
+        
+        <!-- Ave A -->
+        <div class="space-y-1">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            Ave 1 (Lado A) <span class="text-rose-400">*</span>
+          </label>
+          <select
+            id="manualSelectAveA"
+            required
+            onchange="updateManualMatchPreview()"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+          >
+            <!-- Llenado dinámicamente con aves disponibles -->
+          </select>
+        </div>
+
+        <!-- Ave B -->
+        <div class="space-y-1">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            Ave 2 (Lado B) <span class="text-rose-400">*</span>
+          </label>
+          <select
+            id="manualSelectAveB"
+            required
+            onchange="updateManualMatchPreview()"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+          >
+            <!-- Llenado dinámicamente con aves disponibles -->
+          </select>
+        </div>
+
+        <!-- Vista previa y Advertencias en tiempo real -->
+        <div id="manualMatchPreviewContainer" class="hidden p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl space-y-2 text-xs">
+          <!-- Vista de detalles de comparación -->
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeCrearPactoManualModal()"
+            class="touch-btn w-full sm:w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnSubmitManualMatch"
+            class="touch-btn w-full sm:w-2/3 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-indigo-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Confirmar y Pactar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: MOVER / CAMBIAR RIVAL DE UN PACTO   -->
+  <!-- ========================================== -->
+  <div id="moverPactoModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="arrow-left-right" class="w-6 h-6 text-amber-400"></i>
+          <h3 id="moverPactoModalTitle" class="text-lg sm:text-xl font-bold text-white">Mover / Cambiar Ave de Pelea</h3>
+        </div>
+        <button onclick="closeMoverPactoModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="moverPactoModalAlert" class="hidden p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5"></div>
+
+      <!-- Ave Fija -->
+      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-xs text-slate-300">
+        <span class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] block">Ave fija en este enfrentamiento:</span>
+        <div class="flex items-center justify-between">
+          <span id="moverPactoAveFijaPlaca" class="font-mono font-bold text-base text-emerald-400"></span>
+          <span id="moverPactoAveFijaPeso" class="font-mono font-bold text-white"></span>
+        </div>
+        <div id="moverPactoAveFijaInfo" class="text-slate-400 text-xs"></div>
+      </div>
+
+      <form id="moverPactoForm" onsubmit="handleMoverPactoSubmit(event)" class="space-y-4">
+        <div class="space-y-1">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            Seleccionar Nuevo Rival (Ave Reemplazo) <span class="text-rose-400">*</span>
+          </label>
+          <select
+            id="moverPactoSelectNuevoRival"
+            required
+            onchange="updateMoverPactoPreview()"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
+          >
+            <!-- Llenado dinámicamente -->
+          </select>
+        </div>
+
+        <div id="moverPactoPreviewContainer" class="hidden p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl space-y-2 text-xs">
+          <!-- Vista de advertencias del reemplazo -->
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeMoverPactoModal()"
+            class="touch-btn w-full sm:w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="touch-btn w-full sm:w-2/3 py-3 px-4 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-amber-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Confirmar Cambio</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- JAVASCRIPT PURO (VANILLA JS + SUPABASE)    -->
   <!-- ========================================== -->
   <script>
@@ -611,6 +1079,9 @@
     let realtimeCorralesChannel = null;
     let avesData = [];             // Fuente de verdad de aves
     let corralesData = [];         // Fuente de verdad de corrales
+    let baloteoAves = [];          // Fuente de datos de aves ingresadas a Baloteo
+    let peleasPactadas = [];       // Lista de enfrentamientos pactados (con resultado: null, 'A', 'B', 'TABLA')
+    let avesSinPactar = [];        // Lista de aves sin pactar
     let editingPlaca = null;       // Modo edición si contiene la placa
     let currentUser = null;        // Usuario autenticado (administrador)
     
@@ -697,17 +1168,23 @@
       const btnOpenCorrales = document.getElementById('btnOpenCorrales');
       const btnOpenAdd = document.getElementById('btnOpenAdd');
       const btnLogout = document.getElementById('btnLogout');
+      const btnOpenCrearPactoManual = document.getElementById('btnOpenCrearPactoManual');
+      const pesajeFormContainer = document.getElementById('baloteoPesajeFormContainer');
 
       if (isAdmin()) {
         if (btnOpenLogin) btnOpenLogin.classList.add('hidden');
         if (btnOpenCorrales) btnOpenCorrales.classList.remove('hidden');
         if (btnOpenAdd) btnOpenAdd.classList.remove('hidden');
         if (btnLogout) btnLogout.classList.remove('hidden');
+        if (btnOpenCrearPactoManual) btnOpenCrearPactoManual.classList.remove('hidden');
+        if (pesajeFormContainer) pesajeFormContainer.classList.remove('hidden');
       } else {
         if (btnOpenLogin) btnOpenLogin.classList.remove('hidden');
         if (btnOpenCorrales) btnOpenCorrales.classList.add('hidden');
         if (btnOpenAdd) btnOpenAdd.classList.add('hidden');
         if (btnLogout) btnLogout.classList.add('hidden');
+        if (btnOpenCrearPactoManual) btnOpenCrearPactoManual.classList.add('hidden');
+        if (pesajeFormContainer) pesajeFormContainer.classList.add('hidden');
       }
       lucide.createIcons();
     }
@@ -1232,6 +1709,7 @@
       renderCorralSummary();
       populateFilterOptions();
       renderAvesList();
+      populateBaloteoPlacasDatalist();
     }
 
     // =========================================================================
@@ -1444,6 +1922,9 @@
     // =========================================================================
     // 4. VERIFICADOR DE PLACAS (ILIKE / PARCIAL Y SIN DISTINGUIR MAYÚSCULAS)
     // =========================================================================
+    // =========================================================================
+    // 4. VERIFICADOR DE PLACAS (BUSCA POR AMBAS PLACAS Y MUESTRA HISTORIAL)
+    // =========================================================================
     function handleVerifierSearch(rawQuery) {
       const query = rawQuery.trim().toLowerCase();
       const resultBox = document.getElementById('verifierResult');
@@ -1459,15 +1940,38 @@
       btnClear.classList.remove('hidden');
       resultBox.classList.remove('hidden');
 
-      const matches = avesData.filter(ave => (ave.placa || '').toLowerCase().includes(query));
+      // Buscar aves registradas o en baloteo por placa nacional o placa corral
+      const matchingAves = new Map();
+
+      // 1. Coincidencias en tabla aves
+      avesData.forEach(ave => {
+        const placa = (ave.placa || '').toLowerCase();
+        if (placa.includes(query)) {
+          matchingAves.set(ave.placa, { ...ave, origen: 'registro' });
+        }
+      });
+
+      // 2. Coincidencias en pesajes de baloteo (por placa nacional o placa corral)
+      baloteoAves.forEach(balAve => {
+        const pNac = (balAve.placa || '').toLowerCase();
+        const pCorral = (balAve.placaCorral || '').toLowerCase();
+        if (pNac.includes(query) || pCorral.includes(query)) {
+          if (!matchingAves.has(balAve.placa)) {
+            const aveExistente = avesData.find(a => a.placa === balAve.placa);
+            matchingAves.set(balAve.placa, { ...(aveExistente || {}), ...balAve });
+          }
+        }
+      });
+
+      const matches = Array.from(matchingAves.values());
 
       if (matches.length === 0) {
         resultBox.innerHTML = `
           <div class="p-4 bg-rose-950/40 border-2 border-rose-700/60 rounded-xl text-rose-300 flex items-center gap-3 animate-in fade-in duration-150">
             <i data-lucide="alert-circle" class="w-6 h-6 shrink-0 text-rose-400"></i>
             <div>
-              <p class="text-base font-bold text-white">Placa "${escapeHtml(rawQuery)}" no registrada</p>
-              <p class="text-xs text-rose-300/80">No se encontró ningún registro que coincida con esta búsqueda.</p>
+              <p class="text-base font-bold text-white">Placa "${escapeHtml(rawQuery)}" no encontrada</p>
+              <p class="text-xs text-rose-300/80">No se encontró ningún registro ni pesaje que coincida con este código.</p>
             </div>
           </div>
         `;
@@ -1476,45 +1980,86 @@
       }
 
       resultBox.innerHTML = `
-        <div class="space-y-2 animate-in fade-in duration-150">
+        <div class="space-y-3 animate-in fade-in duration-150">
           <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            ${matches.length} ${matches.length === 1 ? 'coincidencia encontrada' : 'coincidencias encontradas'}:
+            ${matches.length} ${matches.length === 1 ? 'ave encontrada' : 'aves encontradas'}:
           </p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            ${matches.map(ave => `
-              <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-2">
-                <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2 gap-2">
-                  <div class="flex items-center gap-2.5">
-                    ${ave.foto_url ? `
-                      <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shrink-0 hover:border-emerald-400 transition group cursor-pointer" title="Ver foto en grande">
-                        <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
-                      </button>
-                    ` : `
-                      <div class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
-                        <i data-lucide="feather" class="w-5 h-5"></i>
+            ${matches.map(ave => {
+              // Buscar historial de baloteo y peleas para esta ave
+              const baloteoInfo = baloteoAves.find(b => b.placa === ave.placa);
+              const peleasAve = peleasPactadas.filter(p => p.aveA.placa === ave.placa || p.aveB.placa === ave.placa);
+
+              return `
+                <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-3">
+                  <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2 gap-2">
+                    <div class="flex items-center gap-2.5">
+                      ${ave.foto_url ? `
+                        <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shrink-0 hover:border-emerald-400 transition group cursor-pointer" title="Ver foto en grande">
+                          <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                        </button>
+                      ` : `
+                        <div class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
+                          <i data-lucide="feather" class="w-5 h-5"></i>
+                        </div>
+                      `}
+                      <div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-lg font-black font-mono text-emerald-400 tracking-wider block leading-tight">${escapeHtml(ave.placa)}</span>
+                          ${(baloteoInfo && baloteoInfo.placaCorral) ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">Corral: ${escapeHtml(baloteoInfo.placaCorral)}</span>` : ''}
+                        </div>
+                        <span class="text-[11px] text-slate-400">${escapeHtml(ave.corral || 'Sin Corral')}</span>
                       </div>
-                    `}
-                    <div>
-                      <span class="text-xl font-black font-mono text-emerald-400 tracking-wider block leading-tight">${escapeHtml(ave.placa)}</span>
-                      <span class="text-[11px] text-slate-400">${escapeHtml(ave.corral || 'Sin Corral')}</span>
                     </div>
+                    ${isAdmin() ? `
+                    <div class="flex gap-1.5">
+                      <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition touch-btn flex items-center gap-1">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
+                      </button>
+                    </div>
+                    ` : ''}
                   </div>
-                  ${isAdmin() ? `
-                  <div class="flex gap-1.5">
-                    <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition touch-btn flex items-center gap-1">
-                      <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
-                    </button>
+
+                  <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-0.5">
+                    <div><span class="text-slate-500 block">F. Marcaje:</span> <b class="text-slate-200">${ave.fecha_marcaje || '-'}</b></div>
+                    <div><span class="text-slate-500 block">F. Nacimiento:</span> <b class="text-slate-200">${ave.fecha_nacimiento || '-'}</b></div>
+                    <div><span class="text-slate-500 block">Responsable:</span> <b class="text-slate-200">${escapeHtml(ave.responsable || '-')}</b></div>
+                    <div><span class="text-slate-500 block">Ubicación:</span> <b class="text-slate-200">${escapeHtml(ave.comuna || '-')}${ave.corral ? ' / ' + escapeHtml(ave.corral) : ''}</b></div>
                   </div>
-                  ` : ''}
+
+                  <!-- Historial de Baloteo y Torneos del Ave -->
+                  <div class="p-2.5 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-1.5 text-xs">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                      <span class="flex items-center gap-1"><i data-lucide="scale" class="w-3.5 h-3.5"></i> Baloteo Actual:</span>
+                      <span>${baloteoInfo ? `${formatOzToLbOz(baloteoInfo.pesoOnzas)} (${baloteoInfo.pesoOnzas} oz)` : '<span class="text-slate-500 font-normal">No pesada</span>'}</span>
+                    </div>
+
+                    ${peleasAve.length > 0 ? `
+                      <div class="space-y-1 pt-1 border-t border-slate-900">
+                        <span class="text-[10px] text-slate-400 block font-semibold uppercase">Peleas y Resultados:</span>
+                        ${peleasAve.map(p => {
+                          const esLadoA = p.aveA.placa === ave.placa;
+                          const rival = esLadoA ? p.aveB : p.aveA;
+                          const gano = (esLadoA && p.resultado === 'A') || (!esLadoA && p.resultado === 'B');
+                          const perdio = (esLadoA && p.resultado === 'B') || (!esLadoA && p.resultado === 'A');
+                          const empate = p.resultado === 'TABLA';
+                          const statusTag = gano ? '<span class="text-emerald-400 font-bold">¡Ganó!</span>' : perdio ? '<span class="text-rose-400 font-bold">Perdió</span>' : empate ? '<span class="text-amber-400 font-bold">Tabla</span>' : '<span class="text-slate-400">Pendiente</span>';
+
+                          return `
+                            <div class="flex items-center justify-between text-[11px] bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+                              <span>vs <b class="font-mono text-slate-200">${escapeHtml(rival.placa)}</b> (${escapeHtml(rival.corral)})</span>
+                              <span>${statusTag}</span>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    ` : `
+                      <p class="text-[11px] text-slate-500">Sin enfrentamientos pactados actualmente.</p>
+                    `}
+                  </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-1">
-                  <div><span class="text-slate-500 block">F. Marcaje:</span> <b class="text-slate-200">${ave.fecha_marcaje || '-'}</b></div>
-                  <div><span class="text-slate-500 block">F. Nacimiento:</span> <b class="text-slate-200">${ave.fecha_nacimiento || '-'}</b></div>
-                  <div><span class="text-slate-500 block">Responsable:</span> <b class="text-slate-200">${escapeHtml(ave.responsable || '-')}</b></div>
-                  <div><span class="text-slate-500 block">Ubicación:</span> <b class="text-slate-200">${escapeHtml(ave.comuna || '-')}${ave.corral ? ' / ' + escapeHtml(ave.corral) : ''}</b></div>
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -1892,6 +2437,1456 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+
+    // =========================================================================
+    // MÓDULO DE BALOTEO: NAVEGACIÓN, PESAJE Y PACTADO AUTOMÁTICO
+    // =========================================================================
+    
+    // Cambio entre Pestaña de Registro y Pestaña de Baloteo
+    function switchTab(tabName) {
+      const btnRegistro = document.getElementById('tabBtnRegistro');
+      const btnBaloteo = document.getElementById('tabBtnBaloteo');
+      const contentRegistro = document.getElementById('tabContentRegistro');
+      const contentBaloteo = document.getElementById('tabContentBaloteo');
+
+      if (tabName === 'registro') {
+        btnRegistro.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md shadow-emerald-950/50";
+        btnBaloteo.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60";
+        contentRegistro.classList.remove('hidden');
+        contentBaloteo.classList.add('hidden');
+      } else if (tabName === 'baloteo') {
+        btnBaloteo.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-amber-600 text-white shadow-md shadow-amber-950/50";
+        btnRegistro.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60";
+        contentBaloteo.classList.remove('hidden');
+        contentRegistro.classList.add('hidden');
+        populateBaloteoPlacasDatalist();
+        renderBaloteoPesadas();
+      }
+      lucide.createIcons();
+    }
+
+    // Actualizar autocompletado de placas registradas
+    function populateBaloteoPlacasDatalist() {
+      const datalist = document.getElementById('baloteoPlacasDatalist');
+      if (!datalist) return;
+      datalist.innerHTML = avesData.map(a => {
+        const extra = [a.corral, a.comuna].filter(Boolean).join(' - ');
+        return `<option value="${escapeHtml(a.placa)}">${escapeHtml(extra)}</option>`;
+      }).join('');
+    }
+
+    // Auto-completar corral y comuna cuando el usuario escribe/selecciona una placa existente
+    function handleBaloteoPlacaInput(value) {
+      const placa = (value || '').trim().toUpperCase();
+      const ave = avesData.find(a => (a.placa || '').toUpperCase() === placa);
+      if (ave) {
+        if (ave.corral) document.getElementById('baloteoInputCorral').value = ave.corral;
+        if (ave.comuna) document.getElementById('baloteoInputComuna').value = ave.comuna;
+      }
+    }
+
+    // Actualizar el indicador dinámico de peso total en onzas
+    function updateBaloteoCalculatedOunces() {
+      const lb = parseInt(document.getElementById('baloteoInputLibras').value, 10) || 0;
+      const oz = parseInt(document.getElementById('baloteoInputOnzas').value, 10) || 0;
+      const totalOz = (lb * 16) + oz;
+
+      document.getElementById('baloteoCalculatedOzLabel').textContent = totalOz;
+      document.getElementById('baloteoCalculatedFormattedLabel').textContent = formatOzToLbOz(totalOz);
+    }
+
+    // Formateador de onzas a string "3:15"
+    function formatOzToLbOz(totalOz) {
+      const lb = Math.floor(totalOz / 16);
+      const oz = totalOz % 16;
+      return `${lb}:${oz < 10 ? '0' + oz : oz}`;
+    }
+
+    // Manejo de envío del formulario de pesaje
+    function handleBaloteoPesajeSubmit(event) {
+      event.preventDefault();
+
+      const placa = document.getElementById('baloteoInputPlaca').value.trim().toUpperCase();
+      const placaCorral = document.getElementById('baloteoInputPlacaCorral').value.trim().toUpperCase() || null;
+      const categoria = document.getElementById('baloteoInputCategoria').value;
+      const corral = document.getElementById('baloteoInputCorral').value.trim() || 'Sin Corral';
+      const comuna = document.getElementById('baloteoInputComuna').value.trim() || null;
+      
+      const lb = parseInt(document.getElementById('baloteoInputLibras').value, 10) || 0;
+      const oz = parseInt(document.getElementById('baloteoInputOnzas').value, 10) || 0;
+      const pesoOnzas = (lb * 16) + oz;
+
+      if (!placa) {
+        alert('Debes ingresar la placa del ave.');
+        return;
+      }
+
+      if (pesoOnzas <= 0) {
+        alert('El peso debe ser mayor a 0 oz.');
+        return;
+      }
+
+      // Validar si el ave ya fue pesada en esta sesión de baloteo
+      const existeIndex = baloteoAves.findIndex(a => a.placa === placa);
+      if (existeIndex !== -1) {
+        if (!confirm(`El ave con placa "${placa}" ya está en la lista de baloteo con peso ${formatOzToLbOz(baloteoAves[existeIndex].pesoOnzas)}. ¿Deseas actualizar sus datos?`)) {
+          return;
+        }
+        baloteoAves[existeIndex] = {
+          placa,
+          placaCorral,
+          categoria,
+          corral,
+          comuna,
+          pesoOnzas,
+          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+      } else {
+        baloteoAves.push({
+          placa,
+          placaCorral,
+          categoria,
+          corral,
+          comuna,
+          pesoOnzas,
+          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+      }
+
+      // Resetear inputs de peso y placa manteniendo categoría para agilizar
+      document.getElementById('baloteoInputPlaca').value = '';
+      document.getElementById('baloteoInputPlacaCorral').value = '';
+      document.getElementById('baloteoInputCorral').value = '';
+      document.getElementById('baloteoInputComuna').value = '';
+      document.getElementById('baloteoInputLibras').value = '';
+      document.getElementById('baloteoInputOnzas').value = '';
+      updateBaloteoCalculatedOunces();
+      document.getElementById('baloteoInputPlaca').focus();
+
+      renderBaloteoPesadas();
+      // Ocultar resultados anteriores para que se vuelva a pactar con los nuevos datos
+      document.getElementById('baloteoResultadosSection').classList.add('hidden');
+    }
+
+    // Renderizar la lista de aves pesadas en espera
+    function renderBaloteoPesadas() {
+      const container = document.getElementById('baloteoPesadasContainer');
+      const badge = document.getElementById('baloteoTotalPesadasBadge');
+      const tabBadge = document.getElementById('baloteoBadgeCount');
+
+      if (badge) badge.textContent = `${baloteoAves.length} ${baloteoAves.length === 1 ? 'ave' : 'aves'}`;
+      if (tabBadge) {
+        if (baloteoAves.length > 0) {
+          tabBadge.textContent = baloteoAves.length;
+          tabBadge.classList.remove('hidden');
+        } else {
+          tabBadge.classList.add('hidden');
+        }
+      }
+
+      if (!container) return;
+
+      if (baloteoAves.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center bg-slate-950/60 rounded-xl border border-slate-800 text-slate-400 space-y-1">
+            <i data-lucide="scale" class="w-7 h-7 mx-auto text-slate-500"></i>
+            <p class="text-xs sm:text-sm font-medium">No hay aves pesadas en la lista de baloteo.</p>
+            <p class="text-[11px] text-slate-500">Ingresa aves arriba con su peso en libras y onzas para iniciar.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
+          ${baloteoAves.map((ave, idx) => `
+            <div class="p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between gap-2 transition shadow-sm">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-mono font-bold text-amber-400 text-sm tracking-wide">${escapeHtml(ave.placa)}</span>
+                  ${ave.placaCorral ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300" title="Placa Corral">${escapeHtml(ave.placaCorral)}</span>` : ''}
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700 truncate max-w-[130px]">${escapeHtml(ave.categoria)}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 truncate mt-0.5">
+                  <span>${escapeHtml(ave.corral)}</span> ${ave.comuna ? `&bull; <span>${escapeHtml(ave.comuna)}</span>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="text-right">
+                  <span class="text-sm font-black text-white font-mono block">${formatOzToLbOz(ave.pesoOnzas)}</span>
+                  <span class="text-[10px] text-amber-300 font-mono font-medium">${ave.pesoOnzas} oz</span>
+                </div>
+                <button
+                  type="button"
+                  onclick="eliminarAveDeBaloteo(${idx})"
+                  class="p-1.5 bg-slate-900 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 rounded-lg transition border border-slate-800 hover:border-rose-800/60 touch-btn"
+                  title="Eliminar de baloteo"
+                >
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function eliminarAveDeBaloteo(index) {
+      baloteoAves.splice(index, 1);
+      renderBaloteoPesadas();
+      document.getElementById('baloteoResultadosSection').classList.add('hidden');
+    }
+
+    function limpiarTodoBaloteo() {
+      if (baloteoAves.length === 0) return;
+      if (!confirm('¿Deseas vaciar la lista completa de aves pesadas para baloteo?')) return;
+      baloteoAves = [];
+      renderBaloteoPesadas();
+      document.getElementById('baloteoResultadosSection').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // MOTOR DE PACTADO AUTOMÁTICO (REGLAS 1, 2 Y 3)
+    // =========================================================================
+    /**
+     * Reglas de Emparejamiento:
+     * 1. Misma Categoría exclusivamente (Marcados Chile, Cresta y Barba Libre, Gallos).
+     * 2. Tolerancia de peso (según el ave más liviana del par):
+     *    - Si pesoMin < 64 oz (hasta 3:15): diferencia máxima = 1 oz.
+     *    - Si pesoMin >= 64 oz (desde 4:00): diferencia máxima = 2 oz.
+     *    - Prioriza siempre pares de 1 oz (o menos) y usa 2 oz solo si no hay mejor opción.
+     * 3. Reglas fijas:
+     *    - NUNCA pactar aves del mismo corral.
+     *    - Evitar misma comuna/ciudad: Si el switch está activo y ambas aves tienen ese dato.
+     *    - Evitar repetir enfrentamientos entre los mismos corrales dentro del evento.
+     *    - Dejar en "Sin pactar" las aves sobrantes (nunca pactar el mismo corral para completar).
+     *    - Maximiza cantidad de pares y prioriza menor diferencia de peso.
+     */
+    function sonEmparejables(aveA, aveB, enfrentamientosCorralesPrevios) {
+      // 1. Misma categoría
+      if (aveA.categoria !== aveB.categoria) return false;
+
+      // 2. Nunca mismo corral (case-insensitive y normalizado)
+      const corralA = (aveA.corral || '').trim().toLowerCase();
+      const corralB = (aveB.corral || '').trim().toLowerCase();
+      if (corralA && corralB && corralA === corralB) return false;
+
+      // 3. Evitar misma comuna/ciudad si el switch está activado y ambas aves tienen comuna
+      const switchComuna = document.getElementById('baloteoSwitchEvitarComuna');
+      const evitarComunaActivo = switchComuna ? switchComuna.checked : true;
+      if (evitarComunaActivo) {
+        const comunaA = (aveA.comuna || '').trim().toLowerCase();
+        const comunaB = (aveB.comuna || '').trim().toLowerCase();
+        if (comunaA && comunaB && comunaA === comunaB) return false;
+      }
+
+      // 4. Tolerancia de peso basada en el ave más liviana
+      const pesoMin = Math.min(aveA.pesoOnzas, aveB.pesoOnzas);
+      const diffOz = Math.abs(aveA.pesoOnzas - aveB.pesoOnzas);
+      const tolMax = (pesoMin < 64) ? 1 : 2; // < 64 oz (hasta 3:15) tol 1 oz, >= 64 oz tol 2 oz
+
+      if (diffOz > tolMax) return false;
+
+      return true;
+    }
+
+    // Cálculo del costo / penalización de una pareja (menor costo = mejor emparejamiento)
+    function calcularCostoPareja(aveA, aveB, enfrentamientosCorralesPrevios) {
+      const diffOz = Math.abs(aveA.pesoOnzas - aveB.pesoOnzas);
+      
+      // Clave única del par de corrales
+      const corralA = (aveA.corral || '').trim().toLowerCase();
+      const corralB = (aveB.corral || '').trim().toLowerCase();
+      const corralPairKey = [corralA, corralB].sort().join(':::');
+      
+      const repeticionesCorral = enfrentamientosCorralesPrevios[corralPairKey] || 0;
+
+      // Costo base:
+      // diffOz * 100
+      // Penalización fuerte si se repite enfrentamiento entre los mismos corrales (repeticiones * 500)
+      let costo = (diffOz * 100) + (repeticionesCorral * 500);
+      return costo;
+    }
+
+    // Algoritmo de Matching Óptimo por Categoría
+    function emparejarAvesPorCategoria(avesGrupo) {
+      const n = avesGrupo.length;
+      if (n < 2) {
+        return { pares: [], sinPactar: [...avesGrupo] };
+      }
+
+      // Precomputar aristas válidas con su costo
+      const aristas = [];
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          if (sonEmparejables(avesGrupo[i], avesGrupo[j])) {
+            const pesoMin = Math.min(avesGrupo[i].pesoOnzas, avesGrupo[j].pesoOnzas);
+            const diffOz = Math.abs(avesGrupo[i].pesoOnzas - avesGrupo[j].pesoOnzas);
+            aristas.push({
+              i,
+              j,
+              diffOz,
+              aveA: avesGrupo[i],
+              aveB: avesGrupo[j]
+            });
+          }
+        }
+      }
+
+      // Si no hay aristas posibles
+      if (aristas.length === 0) {
+        return { pares: [], sinPactar: [...avesGrupo] };
+      }
+
+      // Algoritmo de Búsqueda Exhautiva Inteligente (Branch & Bound con Memoización)
+      // Dado que cada categoría suele tener entre 2 y 40 aves, el espacio con podas es instantáneo.
+      let mejorSolucion = {
+        pares: [],
+        cantPares: -1,
+        costoTotal: Infinity,
+        sinPactar: []
+      };
+
+      const enfrentamientosCorrales = {};
+
+      function backtrack(indexAve, avesUsadas, paresActuales, costoAcumulado) {
+        // Encontrar siguiente ave libre
+        let primerLibre = -1;
+        for (let k = indexAve; k < n; k++) {
+          if (!avesUsadas[k]) {
+            primerLibre = k;
+            break;
+          }
+        }
+
+        // Si ya no hay más aves para revisar
+        if (primerLibre === -1) {
+          const cantPares = paresActuales.length;
+          if (cantPares > mejorSolucion.cantPares || 
+             (cantPares === mejorSolucion.cantPares && costoAcumulado < mejorSolucion.costoTotal)) {
+            
+            const sinPactar = [];
+            for (let k = 0; k < n; k++) {
+              if (!avesUsadas[k]) sinPactar.push(avesGrupo[k]);
+            }
+
+            mejorSolucion = {
+              pares: [...paresActuales],
+              cantPares: cantPares,
+              costoTotal: costoAcumulado,
+              sinPactar: sinPactar
+            };
+          }
+          return;
+        }
+
+        const aveI = avesGrupo[primerLibre];
+
+        // Buscar posibles parejas para primerLibre ordenadas por menor diferencia de peso
+        const candidatos = [];
+        for (let j = primerLibre + 1; j < n; j++) {
+          if (!avesUsadas[j] && sonEmparejables(aveI, avesGrupo[j])) {
+            const costo = calcularCostoPareja(aveI, avesGrupo[j], enfrentamientosCorrales);
+            candidatos.push({ j, costo, aveJ: avesGrupo[j] });
+          }
+        }
+
+        // Ordenar candidatos por menor costo
+        candidatos.sort((a, b) => a.costo - b.costo);
+
+        // Opción 1: Intentar emparejar con cada candidato válido
+        for (const cand of candidatos) {
+          const cA = (aveI.corral || '').trim().toLowerCase();
+          const cB = (cand.aveJ.corral || '').trim().toLowerCase();
+          const pairKey = [cA, cB].sort().join(':::');
+
+          avesUsadas[primerLibre] = true;
+          avesUsadas[cand.j] = true;
+          enfrentamientosCorrales[pairKey] = (enfrentamientosCorrales[pairKey] || 0) + 1;
+
+          paresActuales.push({
+            aveA: aveI,
+            aveB: cand.aveJ,
+            diffOz: Math.abs(aveI.pesoOnzas - cand.aveJ.pesoOnzas)
+          });
+
+          backtrack(primerLibre + 1, avesUsadas, paresActuales, costoAcumulado + cand.costo);
+
+          paresActuales.pop();
+          enfrentamientosCorrales[pairKey]--;
+          avesUsadas[primerLibre] = false;
+          avesUsadas[cand.j] = false;
+        }
+
+        // Opción 2: Dejar esta ave sin pareja (para no bloquear soluciones mayores si es un caso atípico)
+        backtrack(primerLibre + 1, avesUsadas, paresActuales, costoAcumulado);
+      }
+
+      const avesUsadasInit = new Array(n).fill(false);
+      backtrack(0, avesUsadasInit, [], 0);
+
+      // Si quedaron aves sin usar por la mejor solución, asegurarse de agregarlas a sinPactar
+      const usadasFinal = new Set();
+      mejorSolucion.pares.forEach(p => {
+        usadasFinal.add(p.aveA.placa);
+        usadasFinal.add(p.aveB.placa);
+      });
+
+      const sinPactarFinal = avesGrupo.filter(a => !usadasFinal.has(a.placa));
+
+      return {
+        pares: mejorSolucion.pares,
+        sinPactar: sinPactarFinal
+      };
+    }
+
+    // Ejecutar el Baloteo Automático Completo
+    function ejecutarPactadoAutomatico() {
+      if (baloteoAves.length < 2) {
+        alert('Debes ingresar al menos 2 aves pesadas para realizar el pactado automático.');
+        return;
+      }
+
+      // Agrupar aves por Categoría
+      const categoriasMap = {};
+      baloteoAves.forEach(ave => {
+        const cat = ave.categoria || 'Sin Categoría';
+        if (!categoriasMap[cat]) categoriasMap[cat] = [];
+        categoriasMap[cat].push(ave);
+      });
+
+      let todasLasPeleas = [];
+      let todasSinPactar = [];
+
+      Object.keys(categoriasMap).forEach(cat => {
+        const grupo = categoriasMap[cat];
+        // Ordenar inicialmente por peso para acelerar el matching
+        grupo.sort((a, b) => a.pesoOnzas - b.pesoOnzas);
+
+        const resultado = emparejarAvesPorCategoria(grupo);
+        todasLasPeleas = todasLasPeleas.concat(resultado.pares);
+        todasSinPactar = todasSinPactar.concat(resultado.sinPactar);
+      });
+
+      // Inicializar peleas con ID único y resultado null
+      peleasPactadas = todasLasPeleas.map((p, idx) => ({
+        id: `pelea-${Date.now()}-${idx + 1}`,
+        aveA: p.aveA,
+        aveB: p.aveB,
+        diffOz: p.diffOz,
+        resultado: null // 'A', 'B', 'TABLA' o null
+      }));
+
+      avesSinPactar = todasSinPactar;
+
+      renderResultadosPactado();
+    }
+
+    function limpiarResultadosPactado() {
+      if (peleasPactadas.length === 0) return;
+      if (!confirm('¿Deseas limpiar todos los pactos generados? Las aves volverán al listado de espera.')) return;
+      peleasPactadas = [];
+      avesSinPactar = [...baloteoAves];
+      renderResultadosPactado();
+    }
+
+    // =========================================================================
+    // 5. REGISTRO DE RESULTADOS Y RANKING (GANA A, GANA B, TABLA)
+    // =========================================================================
+    function registrarResultadoPelea(peleaId, resultado) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const pelea = peleasPactadas.find(p => p.id === peleaId);
+      if (!pelea) return;
+
+      // Si se hace clic en el mismo resultado, se desmarca (null)
+      if (pelea.resultado === resultado) {
+        pelea.resultado = null;
+      } else {
+        pelea.resultado = resultado;
+      }
+
+      renderResultadosPactado(false); // No hacer scroll automático
+    }
+
+    // Calcular y Renderizar Tabla de Ranking de Corrales
+    function renderRankingCorrales() {
+      const container = document.getElementById('baloteoRankingContainer');
+      if (!container) return;
+
+      const stats = {};
+
+      // Obtener todos los corrales que participan en el baloteo o en los pactos
+      baloteoAves.forEach(a => {
+        const c = (a.corral || 'Sin Corral').trim();
+        if (!stats[c]) {
+          stats[c] = { corral: c, comuna: a.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+      });
+
+      peleasPactadas.forEach(p => {
+        const corralA = (p.aveA.corral || 'Sin Corral').trim();
+        const corralB = (p.aveB.corral || 'Sin Corral').trim();
+
+        if (!stats[corralA]) {
+          stats[corralA] = { corral: corralA, comuna: p.aveA.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+        if (!stats[corralB]) {
+          stats[corralB] = { corral: corralB, comuna: p.aveB.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+
+        if (p.resultado) {
+          stats[corralA].pj++;
+          stats[corralB].pj++;
+
+          if (p.resultado === 'A') {
+            stats[corralA].pg++;
+            stats[corralA].pts += 3;
+            stats[corralB].pp++;
+          } else if (p.resultado === 'B') {
+            stats[corralB].pg++;
+            stats[corralB].pts += 3;
+            stats[corralA].pp++;
+          } else if (p.resultado === 'TABLA') {
+            stats[corralA].pe++;
+            stats[corralA].pts += 1;
+            stats[corralB].pe++;
+            stats[corralB].pts += 1;
+          }
+        }
+      });
+
+      const rankingList = Object.values(stats).sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.pg !== a.pg) return b.pg - a.pg;
+        return a.corral.localeCompare(b.corral);
+      });
+
+      if (rankingList.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">No hay datos de corrales en baloteo aún.</p>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-950/60">
+              <th class="py-2.5 px-3">#</th>
+              <th class="py-2.5 px-3">Corral</th>
+              <th class="py-2.5 px-3">Comuna</th>
+              <th class="py-2.5 px-2 text-center" title="Partidas Jugadas">PJ</th>
+              <th class="py-2.5 px-2 text-center text-emerald-400" title="Partidas Ganadas">PG</th>
+              <th class="py-2.5 px-2 text-center text-amber-400" title="Empates">PE</th>
+              <th class="py-2.5 px-2 text-center text-rose-400" title="Partidas Perdidas">PP</th>
+              <th class="py-2.5 px-3 text-right font-black text-amber-300" title="Puntos">PTS</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60">
+            ${rankingList.map((item, index) => {
+              const pos = index + 1;
+              const posBadge = pos === 1 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : pos === 2 ? 'bg-slate-300/20 text-slate-200 border-slate-400/40' : pos === 3 ? 'bg-amber-700/20 text-amber-400 border-amber-700/40' : 'bg-slate-800 text-slate-400 border-slate-700';
+              return `
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-mono">
+                    <span class="w-5 h-5 inline-flex items-center justify-center rounded-full text-xs font-bold border ${posBadge}">
+                      ${pos}
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 font-bold text-white">${escapeHtml(item.corral)}</td>
+                  <td class="py-2.5 px-3 text-slate-400 text-xs">${escapeHtml(item.comuna)}</td>
+                  <td class="py-2.5 px-2 text-center font-mono font-medium">${item.pj}</td>
+                  <td class="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">${item.pg}</td>
+                  <td class="py-2.5 px-2 text-center font-mono font-bold text-amber-400">${item.pe}</td>
+                  <td class="py-2.5 px-2 text-center font-mono font-bold text-rose-400">${item.pp}</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-black text-base text-amber-300">${item.pts}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // =========================================================================
+    // 4. PACTADO MANUAL (CREAR, MOVER, ELIMINAR CON ADVERTENCIAS Y CONFIRMACIÓN)
+    // =========================================================================
+    
+    // Función auxiliar que comprueba si un par rompe reglas y devuelve array de advertencias
+    function obtenerAdvertenciasPacto(aveA, aveB) {
+      const advertencias = [];
+
+      // 1. Categoría
+      if (aveA.categoria !== aveB.categoria) {
+        advertencias.push(`Categorías distintas: "${aveA.categoria}" vs "${aveB.categoria}".`);
+      }
+
+      // 2. Mismo corral
+      const corralA = (aveA.corral || '').trim().toLowerCase();
+      const corralB = (aveB.corral || '').trim().toLowerCase();
+      if (corralA && corralB && corralA === corralB) {
+        advertencias.push(`Ambas aves pertenecen al MISMO CORRAL ("${aveA.corral}").`);
+      }
+
+      // 3. Misma comuna (solo si ambas tienen comuna y el switch está activo)
+      const switchComuna = document.getElementById('baloteoSwitchEvitarComuna');
+      const evitarComunaActivo = switchComuna ? switchComuna.checked : true;
+      const comunaA = (aveA.comuna || '').trim().toLowerCase();
+      const comunaB = (aveB.comuna || '').trim().toLowerCase();
+      if (evitarComunaActivo && comunaA && comunaB && comunaA === comunaB) {
+        advertencias.push(`Ambas aves pertenecen a la MISMA COMUNA/CIUDAD ("${aveA.comuna}").`);
+      }
+
+      // 4. Tolerancia de peso
+      const pesoMin = Math.min(aveA.pesoOnzas, aveB.pesoOnzas);
+      const diffOz = Math.abs(aveA.pesoOnzas - aveB.pesoOnzas);
+      const tolMax = (pesoMin < 64) ? 1 : 2;
+
+      if (diffOz > tolMax) {
+        advertencias.push(`Diferencia de peso excesiva: ${diffOz} oz (máximo permitido por tolerancia para peso ${formatOzToLbOz(pesoMin)} es de ${tolMax} oz).`);
+      }
+
+      return advertencias;
+    }
+
+    // Modal Crear Pacto Manual
+    function openCrearPactoManualModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      // Obtener placas que están libres o en baloteo
+      const selectA = document.getElementById('manualSelectAveA');
+      const selectB = document.getElementById('manualSelectAveB');
+
+      if (baloteoAves.length < 2) {
+        alert('Debes tener al menos 2 aves en el módulo de baloteo para crear un pacto manual.');
+        return;
+      }
+
+      // Construir opciones de aves disponibles
+      const optionsHtml = baloteoAves.map(ave => {
+        const estaPactada = peleasPactadas.some(p => p.aveA.placa === ave.placa || p.aveB.placa === ave.placa);
+        const pactadaLabel = estaPactada ? ' (Ya pactada)' : '';
+        return `<option value="${escapeHtml(ave.placa)}">${escapeHtml(ave.placa)} - ${escapeHtml(ave.categoria)} - ${formatOzToLbOz(ave.pesoOnzas)} (${ave.pesoOnzas}oz) - ${escapeHtml(ave.corral)} / ${escapeHtml(ave.comuna)}${pactadaLabel}</option>`;
+      }).join('');
+
+      selectA.innerHTML = `<option value="">-- Seleccionar Ave 1 --</option>` + optionsHtml;
+      selectB.innerHTML = `<option value="">-- Seleccionar Ave 2 --</option>` + optionsHtml;
+
+      // Seleccionar por defecto las dos primeras aves sin pactar si existen
+      if (avesSinPactar.length >= 2) {
+        selectA.value = avesSinPactar[0].placa;
+        selectB.value = avesSinPactar[1].placa;
+      } else if (baloteoAves.length >= 2) {
+        selectA.value = baloteoAves[0].placa;
+        selectB.value = baloteoAves[1].placa;
+      }
+
+      document.getElementById('crearPactoManualAlert').classList.add('hidden');
+      document.getElementById('crearPactoManualModal').classList.remove('hidden');
+      updateManualMatchPreview();
+      lucide.createIcons();
+    }
+
+    function closeCrearPactoManualModal() {
+      document.getElementById('crearPactoManualModal').classList.add('hidden');
+    }
+
+    function updateManualMatchPreview() {
+      const placaA = document.getElementById('manualSelectAveA').value;
+      const placaB = document.getElementById('manualSelectAveB').value;
+      const container = document.getElementById('manualMatchPreviewContainer');
+
+      if (!placaA || !placaB || placaA === placaB) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      const aveA = baloteoAves.find(a => a.placa === placaA);
+      const aveB = baloteoAves.find(a => a.placa === placaB);
+
+      if (!aveA || !aveB) return;
+
+      const diffOz = Math.abs(aveA.pesoOnzas - aveB.pesoOnzas);
+      const advertencias = obtenerAdvertenciasPacto(aveA, aveB);
+
+      container.classList.remove('hidden');
+      container.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="font-semibold text-slate-300">Diferencia de peso: <b class="text-white font-mono">${diffOz} oz</b></span>
+          <span class="text-[11px] text-slate-400">Tolerancia máxima reglamentaria: <b class="text-slate-200">${Math.min(aveA.pesoOnzas, aveB.pesoOnzas) < 64 ? '1 oz' : '2 oz'}</b></span>
+        </div>
+
+        ${advertencias.length > 0 ? `
+          <div class="p-3 bg-amber-950/60 border border-amber-600/60 rounded-xl text-amber-200 space-y-1.5 animate-in fade-in duration-150">
+            <div class="flex items-center gap-1.5 font-bold text-amber-300">
+              <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+              <span>Advertencia de Reglas (Se solicitará confirmación):</span>
+            </div>
+            <ul class="list-disc list-inside space-y-0.5 text-[11px]">
+              ${advertencias.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+            </ul>
+          </div>
+        ` : `
+          <div class="p-2.5 bg-emerald-950/50 border border-emerald-700/50 rounded-xl text-emerald-300 flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>Pacto 100% válido dentro de las reglas y tolerancias oficiales.</span>
+          </div>
+        `}
+      `;
+      lucide.createIcons();
+    }
+
+    function handleCrearPactoManualSubmit(event) {
+      event.preventDefault();
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const placaA = document.getElementById('manualSelectAveA').value;
+      const placaB = document.getElementById('manualSelectAveB').value;
+
+      if (!placaA || !placaB) {
+        alert('Debes seleccionar ambas aves.');
+        return;
+      }
+
+      if (placaA === placaB) {
+        alert('No puedes pactar una misma ave contra sí misma.');
+        return;
+      }
+
+      const aveA = baloteoAves.find(a => a.placa === placaA);
+      const aveB = baloteoAves.find(a => a.placa === placaB);
+
+      if (!aveA || !aveB) return;
+
+      const advertencias = obtenerAdvertenciasPacto(aveA, aveB);
+
+      if (advertencias.length > 0) {
+        let msg = `⚠️ ATENCIÓN: Este pacto manual rompe las siguientes reglas:\n\n`;
+        advertencias.forEach(w => { msg += `• ${w}\n`; });
+        msg += `\n¿Deseas confirmar y forzar este pacto de todas formas?`;
+
+        if (!confirm(msg)) {
+          return;
+        }
+      }
+
+      // Si alguna de las aves ya estaba en otra pelea, removerla de su pelea anterior
+      peleasPactadas = peleasPactadas.filter(p => {
+        const usaA = (p.aveA.placa === placaA || p.aveB.placa === placaA);
+        const usaB = (p.aveA.placa === placaB || p.aveB.placa === placaB);
+        return !usaA && !usaB;
+      });
+
+      // Agregar la nueva pelea
+      peleasPactadas.push({
+        id: `pelea-${Date.now()}`,
+        aveA,
+        aveB,
+        diffOz: Math.abs(aveA.pesoOnzas - aveB.pesoOnzas),
+        resultado: null
+      });
+
+      // Recalcular lista de sin pactar
+      actualizarAvesSinPactarDesdePactadas();
+
+      closeCrearPactoManualModal();
+      renderResultadosPactado();
+    }
+
+    // Modal Mover / Cambiar Ave de Pelea
+    let moverPactoTargetPeleaId = null;
+    let moverPactoTargetLado = null; // 'A' o 'B' (el lado que se va a reemplazar)
+
+    function openMoverPactoModal(peleaId, ladoAReemplazar) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const pelea = peleasPactadas.find(p => p.id === peleaId);
+      if (!pelea) return;
+
+      moverPactoTargetPeleaId = peleaId;
+      moverPactoTargetLado = ladoAReemplazar;
+
+      const aveFija = ladoAReemplazar === 'B' ? pelea.aveA : pelea.aveB;
+      const aveActual = ladoAReemplazar === 'B' ? pelea.aveB : pelea.aveA;
+
+      document.getElementById('moverPactoModalTitle').textContent = `Cambiar Rival de ${aveFija.placa}`;
+      document.getElementById('moverPactoAveFijaPlaca').textContent = aveFija.placa;
+      document.getElementById('moverPactoAveFijaPeso').textContent = `${formatOzToLbOz(aveFija.pesoOnzas)} (${aveFija.pesoOnzas} oz)`;
+      document.getElementById('moverPactoAveFijaInfo').textContent = `${aveFija.categoria} • ${aveFija.corral} • ${aveFija.comuna}`;
+
+      // Llenar select con candidatos (todas las aves de baloteo excepto el ave fija)
+      const selectRival = document.getElementById('moverPactoSelectNuevoRival');
+      selectRival.innerHTML = baloteoAves
+        .filter(a => a.placa !== aveFija.placa)
+        .map(ave => {
+          const esActual = ave.placa === aveActual.placa;
+          const estaPactada = peleasPactadas.some(p => p.id !== peleaId && (p.aveA.placa === ave.placa || p.aveB.placa === ave.placa));
+          const tag = esActual ? ' (Rival actual)' : estaPactada ? ' (En otra pelea)' : ' (Sin pactar)';
+          return `<option value="${escapeHtml(ave.placa)}" ${esActual ? 'selected' : ''}>${escapeHtml(ave.placa)} - ${escapeHtml(ave.categoria)} - ${formatOzToLbOz(ave.pesoOnzas)} (${ave.pesoOnzas}oz) - ${escapeHtml(ave.corral)}${tag}</option>`;
+        }).join('');
+
+      document.getElementById('moverPactoModalAlert').classList.add('hidden');
+      document.getElementById('moverPactoModal').classList.remove('hidden');
+      updateMoverPactoPreview();
+      lucide.createIcons();
+    }
+
+    function closeMoverPactoModal() {
+      document.getElementById('moverPactoModal').classList.add('hidden');
+      moverPactoTargetPeleaId = null;
+      moverPactoTargetLado = null;
+    }
+
+    function updateMoverPactoPreview() {
+      const pelea = peleasPactadas.find(p => p.id === moverPactoTargetPeleaId);
+      if (!pelea) return;
+
+      const aveFija = moverPactoTargetLado === 'B' ? pelea.aveA : pelea.aveB;
+      const nuevoPlaca = document.getElementById('moverPactoSelectNuevoRival').value;
+      const container = document.getElementById('moverPactoPreviewContainer');
+
+      if (!nuevoPlaca) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      const nuevoAve = baloteoAves.find(a => a.placa === nuevoPlaca);
+      if (!nuevoAve) return;
+
+      const diffOz = Math.abs(aveFija.pesoOnzas - nuevoAve.pesoOnzas);
+      const advertencias = obtenerAdvertenciasPacto(aveFija, nuevoAve);
+
+      container.classList.remove('hidden');
+      container.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="font-semibold text-slate-300">Nueva diferencia de peso: <b class="text-white font-mono">${diffOz} oz</b></span>
+          <span class="text-[11px] text-slate-400">Tolerancia máx: <b class="text-slate-200">${Math.min(aveFija.pesoOnzas, nuevoAve.pesoOnzas) < 64 ? '1 oz' : '2 oz'}</b></span>
+        </div>
+
+        ${advertencias.length > 0 ? `
+          <div class="p-3 bg-amber-950/60 border border-amber-600/60 rounded-xl text-amber-200 space-y-1 animate-in fade-in duration-150">
+            <div class="flex items-center gap-1.5 font-bold text-amber-300">
+              <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+              <span>Advertencia de Reglas (Se solicitará confirmación):</span>
+            </div>
+            <ul class="list-disc list-inside space-y-0.5 text-[11px]">
+              ${advertencias.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+            </ul>
+          </div>
+        ` : `
+          <div class="p-2.5 bg-emerald-950/50 border border-emerald-700/50 rounded-xl text-emerald-300 flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>Pacto 100% válido dentro de las reglas y tolerancias oficiales.</span>
+          </div>
+        `}
+      `;
+      lucide.createIcons();
+    }
+
+    function handleMoverPactoSubmit(event) {
+      event.preventDefault();
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const pelea = peleasPactadas.find(p => p.id === moverPactoTargetPeleaId);
+      if (!pelea) return;
+
+      const aveFija = moverPactoTargetLado === 'B' ? pelea.aveA : pelea.aveB;
+      const nuevoPlaca = document.getElementById('moverPactoSelectNuevoRival').value;
+      const nuevoAve = baloteoAves.find(a => a.placa === nuevoPlaca);
+
+      if (!nuevoAve) return;
+
+      const advertencias = obtenerAdvertenciasPacto(aveFija, nuevoAve);
+
+      if (advertencias.length > 0) {
+        let msg = `⚠️ ATENCIÓN: El cambio de rival genera las siguientes advertencias:\n\n`;
+        advertencias.forEach(w => { msg += `• ${w}\n`; });
+        msg += `\n¿Deseas confirmar el cambio de todas formas?`;
+
+        if (!confirm(msg)) return;
+      }
+
+      // Si nuevoAve ya estaba en otra pelea distinta, eliminar esa otra pelea
+      peleasPactadas = peleasPactadas.filter(p => {
+        if (p.id === pelea.id) return true;
+        return p.aveA.placa !== nuevoAve.placa && p.aveB.placa !== nuevoAve.placa;
+      });
+
+      // Actualizar la pelea
+      if (moverPactoTargetLado === 'B') {
+        pelea.aveB = nuevoAve;
+      } else {
+        pelea.aveA = nuevoAve;
+      }
+      pelea.diffOz = Math.abs(pelea.aveA.pesoOnzas - pelea.aveB.pesoOnzas);
+      pelea.resultado = null; // Reiniciar resultado de la pelea editada
+
+      actualizarAvesSinPactarDesdePactadas();
+      closeMoverPactoModal();
+      renderResultadosPactado();
+    }
+
+    // Eliminar un pacto individual
+    function eliminarPactoIndividual(peleaId) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const pelea = peleasPactadas.find(p => p.id === peleaId);
+      if (!pelea) return;
+
+      if (!confirm(`¿Deseas desarmar la pelea entre "${pelea.aveA.placa}" y "${pelea.aveB.placa}"? Ambas aves volverán a la lista de "Sin pactar".`)) {
+        return;
+      }
+
+      peleasPactadas = peleasPactadas.filter(p => p.id !== peleaId);
+      actualizarAvesSinPactarDesdePactadas();
+      renderResultadosPactado();
+    }
+
+    function actualizarAvesSinPactarDesdePactadas() {
+      const usadas = new Set();
+      peleasPactadas.forEach(p => {
+        usadas.add(p.aveA.placa);
+        usadas.add(p.aveB.placa);
+      });
+      avesSinPactar = baloteoAves.filter(a => !usadas.has(a.placa));
+    }
+
+    // =========================================================================
+    // RENDERIZADO GLOBAL DE RESULTADOS DEL BALOTEO
+    // =========================================================================
+    function renderResultadosPactado(shouldScroll = true) {
+      const section = document.getElementById('baloteoResultadosSection');
+      const pactadosContainer = document.getElementById('baloteoPactadosContainer');
+      const sinPactarContainer = document.getElementById('baloteoSinPactarContainer');
+      const pactadosBadge = document.getElementById('baloteoPactadosCountBadge');
+      const sinPactarBadge = document.getElementById('baloteoSinPactarCountBadge');
+
+      if (!section || !pactadosContainer || !sinPactarContainer) return;
+
+      section.classList.remove('hidden');
+
+      pactadosBadge.textContent = `${peleasPactadas.length} ${peleasPactadas.length === 1 ? 'pelea' : 'peleas'}`;
+      sinPactarBadge.textContent = `${avesSinPactar.length} ${avesSinPactar.length === 1 ? 'ave' : 'aves'}`;
+
+      // 1. Render de Peleas Pactadas
+      if (peleasPactadas.length === 0) {
+        pactadosContainer.innerHTML = `
+          <div class="p-6 text-center bg-slate-950/60 rounded-xl border border-slate-800 text-slate-400 space-y-2">
+            <i data-lucide="swords" class="w-8 h-8 mx-auto text-slate-500"></i>
+            <p class="text-sm font-medium">No hay enfrentamientos pactados actualmente.</p>
+            <p class="text-xs text-slate-500">Puedes ejecutar el "Pactado Automático" o usar el botón "Crear Pacto Manual".</p>
+          </div>
+        `;
+      } else {
+        pactadosContainer.innerHTML = peleasPactadas.map((pelea, idx) => {
+          const numPelea = idx + 1;
+          const a = pelea.aveA;
+          const b = pelea.aveB;
+          const diff = pelea.diffOz;
+          const res = pelea.resultado; // null, 'A', 'B', 'TABLA'
+
+          const advertencias = obtenerAdvertenciasPacto(a, b);
+          const tieneAdvertencias = advertencias.length > 0;
+
+          return `
+            <div class="bg-slate-950 border ${tieneAdvertencias ? 'border-amber-700/60' : 'border-slate-800'} hover:border-emerald-500/50 rounded-2xl p-4 transition shadow-lg space-y-3">
+              
+              <!-- Cabecera de la Pelea -->
+              <div class="flex items-center justify-between pb-2 border-b border-slate-800 gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 bg-emerald-600 text-white font-black text-xs rounded-lg shadow-sm">
+                    PELEA #${numPelea}
+                  </span>
+                  <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">
+                    ${escapeHtml(a.categoria)}
+                  </span>
+                  ${tieneAdvertencias ? `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800/80" title="${escapeHtml(advertencias.join(' | '))}">
+                      <i data-lucide="alert-triangle" class="w-3 h-3"></i> Manual con excepción
+                    </span>
+                  ` : ''}
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1 text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full ${diff === 0 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : diff === 1 ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+                    <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                    <span>Diferencia: ${diff} oz</span>
+                  </div>
+
+                  ${isAdmin() ? `
+                    <!-- Botón Eliminar Pacto -->
+                    <button
+                      onclick="eliminarPactoIndividual('${pelea.id}')"
+                      class="p-1.5 bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 rounded-lg transition border border-slate-800 hover:border-rose-800 touch-btn"
+                      title="Desarmar este pacto"
+                    >
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+
+              <!-- Ficha de Ambos Rivales -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+                
+                <!-- Ave 1 (Lado A) -->
+                <div class="p-3 bg-slate-900/90 border ${res === 'A' ? 'border-2 border-emerald-500 bg-emerald-950/20' : res === 'B' ? 'border-slate-800 opacity-60' : 'border-slate-800'} rounded-xl space-y-2 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-mono font-black text-base ${res === 'A' ? 'text-emerald-300' : 'text-emerald-400'} uppercase tracking-wider">${escapeHtml(a.placa)}</span>
+                        ${a.placaCorral ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-300" title="Placa Corral">${escapeHtml(a.placaCorral)}</span>` : ''}
+                      </div>
+                      <span class="font-mono font-bold text-sm text-white">${formatOzToLbOz(a.pesoOnzas)} <span class="text-xs text-slate-400 font-normal">(${a.pesoOnzas} oz)</span></span>
+                    </div>
+                    <div class="text-xs text-slate-300 flex items-center justify-between pt-1">
+                      <span>Corral: <b class="text-slate-100">${escapeHtml(a.corral)}</b></span>
+                      <span>${a.comuna ? `Comuna: <b class="text-slate-100">${escapeHtml(a.comuna)}</b>` : '<span class="text-slate-500 italic">Sin comuna</span>'}</span>
+                    </div>
+                  </div>
+
+                  ${isAdmin() ? `
+                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                      <button
+                        onclick="registrarResultadoPelea('${pelea.id}', 'A')"
+                        class="touch-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${res === 'A' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'}"
+                      >
+                        <i data-lucide="trophy" class="w-3.5 h-3.5 ${res === 'A' ? 'text-white' : 'text-emerald-400'}"></i>
+                        <span>${res === 'A' ? '¡Ganador A!' : 'Gana A'}</span>
+                      </button>
+                      <button
+                        onclick="openMoverPactoModal('${pelea.id}', 'A')"
+                        class="touch-btn p-1.5 bg-slate-800 hover:bg-indigo-950/60 hover:text-indigo-300 text-slate-400 rounded-lg transition border border-slate-700/60"
+                        title="Cambiar Ave A por otra"
+                      >
+                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  ` : res === 'A' ? `
+                    <div class="pt-1 text-center font-bold text-emerald-400 text-xs flex items-center justify-center gap-1">
+                      <i data-lucide="trophy" class="w-3.5 h-3.5"></i> Ganador
+                    </div>
+                  ` : ''}
+                </div>
+
+                <!-- Ave 2 (Lado B) -->
+                <div class="p-3 bg-slate-900/90 border ${res === 'B' ? 'border-2 border-emerald-500 bg-emerald-950/20' : res === 'A' ? 'border-slate-800 opacity-60' : 'border-slate-800'} rounded-xl space-y-2 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-mono font-black text-base ${res === 'B' ? 'text-emerald-300' : 'text-amber-400'} uppercase tracking-wider">${escapeHtml(b.placa)}</span>
+                        ${b.placaCorral ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-300" title="Placa Corral">${escapeHtml(b.placaCorral)}</span>` : ''}
+                      </div>
+                      <span class="font-mono font-bold text-sm text-white">${formatOzToLbOz(b.pesoOnzas)} <span class="text-xs text-slate-400 font-normal">(${b.pesoOnzas} oz)</span></span>
+                    </div>
+                    <div class="text-xs text-slate-300 flex items-center justify-between pt-1">
+                      <span>Corral: <b class="text-slate-100">${escapeHtml(b.corral)}</b></span>
+                      <span>${b.comuna ? `Comuna: <b class="text-slate-100">${escapeHtml(b.comuna)}</b>` : '<span class="text-slate-500 italic">Sin comuna</span>'}</span>
+                    </div>
+                  </div>
+
+                  ${isAdmin() ? `
+                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                      <button
+                        onclick="registrarResultadoPelea('${pelea.id}', 'B')"
+                        class="touch-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${res === 'B' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'}"
+                      >
+                        <i data-lucide="trophy" class="w-3.5 h-3.5 ${res === 'B' ? 'text-white' : 'text-amber-400'}"></i>
+                        <span>${res === 'B' ? '¡Ganador B!' : 'Gana B'}</span>
+                      </button>
+                      <button
+                        onclick="openMoverPactoModal('${pelea.id}', 'B')"
+                        class="touch-btn p-1.5 bg-slate-800 hover:bg-indigo-950/60 hover:text-indigo-300 text-slate-400 rounded-lg transition border border-slate-700/60"
+                        title="Cambiar Ave B por otra"
+                      >
+                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  ` : res === 'B' ? `
+                    <div class="pt-1 text-center font-bold text-emerald-400 text-xs flex items-center justify-center gap-1">
+                      <i data-lucide="trophy" class="w-3.5 h-3.5"></i> Ganador
+                    </div>
+                  ` : ''}
+                </div>
+
+              </div>
+
+              <!-- Control de Empate (Tabla) -->
+              ${isAdmin() ? `
+                <div class="flex items-center justify-center pt-1 border-t border-slate-900">
+                  <button
+                    onclick="registrarResultadoPelea('${pelea.id}', 'TABLA')"
+                    class="touch-btn px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${res === 'TABLA' ? 'bg-amber-600 text-white shadow-md shadow-amber-950' : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800'}"
+                  >
+                    <i data-lucide="equal" class="w-3.5 h-3.5"></i>
+                    <span>${res === 'TABLA' ? 'Pelea Empatada (Tabla)' : 'Declarar Tabla (Empate)'}</span>
+                  </button>
+                </div>
+              ` : res === 'TABLA' ? `
+                <div class="text-center font-bold text-amber-400 text-xs pt-1 flex items-center justify-center gap-1">
+                  <i data-lucide="equal" class="w-3.5 h-3.5"></i> Resultado: Empate (Tabla)
+                </div>
+              ` : ''}
+
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Render de Ranking y Posiciones
+      renderRankingCorrales();
+
+      // 3. Render de Aves Sin Pactar
+      if (avesSinPactar.length === 0) {
+        sinPactarContainer.innerHTML = `
+          <div class="p-4 text-center bg-emerald-950/30 rounded-xl border border-emerald-800/40 text-emerald-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>¡Excelente! Todas las aves pesadas están actualmente pactadas.</span>
+          </div>
+        `;
+      } else {
+        sinPactarContainer.innerHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            ${avesSinPactar.map(ave => `
+              <div class="p-3 bg-slate-950 border border-rose-900/40 rounded-xl flex items-center justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-mono font-bold text-rose-400 text-sm">${escapeHtml(ave.placa)}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">${escapeHtml(ave.categoria)}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    ${escapeHtml(ave.corral)} &bull; ${escapeHtml(ave.comuna)}
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="text-sm font-bold text-white font-mono block">${formatOzToLbOz(ave.pesoOnzas)}</span>
+                  <span class="text-[10px] text-slate-500 font-mono">${ave.pesoOnzas} oz</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      lucide.createIcons();
+
+      if (shouldScroll) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // =========================================================================
+    // 6. GENERACIÓN DE PDF Y COMPARTIR POR WHATSAPP (jsPDF + autoTable)
+    // =========================================================================
+    
+    // Función utilitaria para compartir o descargar archivo PDF
+    async function compartirODescargarPDF(doc, filename, shareTitle, shareText) {
+      const pdfBlob = doc.output('blob');
+      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+      // Si el navegador móvil soporta Web Share API con archivos (WhatsApp, etc.)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: shareText,
+            files: [pdfFile]
+          });
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.warn("Error al compartir vía Web Share API:", err);
+          }
+        }
+      }
+
+      // Fallback: Descargar el archivo directamente en PC o navegadores sin Web Share
+      doc.save(filename);
+    }
+
+    // Generar PDF de Enfrentamientos Pactados
+    function generarPDFPactados() {
+      if (peleasPactadas.length === 0) {
+        alert('No hay enfrentamientos pactados para exportar a PDF.');
+        return;
+      }
+
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Cargando librería PDF, por favor intenta en unos segundos.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const fechaHoy = new Date().toLocaleDateString('es-CL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Encabezado del PDF
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, 210, 26, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('REGISTRO Y CONTROL DE AVES - LISTADO DE PACTADOS', 14, 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.text(`Fecha de emisión: ${fechaHoy} | Total de peleas: ${peleasPactadas.length}`, 14, 20);
+
+      // Preparar Filas de la Tabla
+      const tableRows = peleasPactadas.map((p, idx) => {
+        const a = p.aveA;
+        const b = p.aveB;
+        const resText = p.resultado === 'A' ? `Gana ${a.placa}` : p.resultado === 'B' ? `Gana ${b.placa}` : p.resultado === 'TABLA' ? 'Tabla (Empate)' : 'Pendiente';
+
+        const labelA = `${a.placa}${a.placaCorral ? ` [${a.placaCorral}]` : ''}\n${a.corral || 'S/C'}${a.comuna ? ` (${a.comuna})` : ''}\n${formatOzToLbOz(a.pesoOnzas)} (${a.pesoOnzas}oz)`;
+        const labelB = `${b.placa}${b.placaCorral ? ` [${b.placaCorral}]` : ''}\n${b.corral || 'S/C'}${b.comuna ? ` (${b.comuna})` : ''}\n${formatOzToLbOz(b.pesoOnzas)} (${b.pesoOnzas}oz)`;
+
+        return [
+          `#${idx + 1}`,
+          a.categoria,
+          labelA,
+          labelB,
+          `${p.diffOz} oz`,
+          resText
+        ];
+      });
+
+      doc.autoTable({
+        head: [['Pelea', 'Categoría', 'Ave 1 (Lado A)', 'Ave 2 (Lado B)', 'Dif.', 'Resultado']],
+        body: tableRows,
+        startY: 32,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [5, 150, 105], // emerald-600
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [30, 41, 59],
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 32, fontStyle: 'bold' },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 50 },
+          4: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+          5: { cellWidth: 27, halign: 'center', fontStyle: 'bold' }
+        },
+        styles: {
+          overflow: 'linebreak',
+          cellPadding: 3
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        }
+      });
+
+      // Pie de página
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(`Página ${i} de ${pageCount} - Generado por Control de Aves`, 14, 288);
+      }
+
+      const filename = `Pactados_Baloteo_${Date.now()}.pdf`;
+      compartirODescargarPDF(
+        doc,
+        filename,
+        'Listado Oficial de Peleas Pactadas',
+        `Adjunto el listado oficial de enfrentamientos pactados (${fechaHoy}).`
+      );
+    }
+
+    // Generar PDF del Ranking y Estadísticas de Corrales
+    function generarPDFRanking() {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Cargando librería PDF, por favor intenta en unos segundos.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const fechaHoy = new Date().toLocaleDateString('es-CL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Calcular estadísticas de corrales
+      const stats = {};
+      baloteoAves.forEach(a => {
+        const c = (a.corral || 'Sin Corral').trim();
+        if (!stats[c]) {
+          stats[c] = { corral: c, comuna: a.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+      });
+
+      peleasPactadas.forEach(p => {
+        const corralA = (p.aveA.corral || 'Sin Corral').trim();
+        const corralB = (p.aveB.corral || 'Sin Corral').trim();
+
+        if (!stats[corralA]) {
+          stats[corralA] = { corral: corralA, comuna: p.aveA.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+        if (!stats[corralB]) {
+          stats[corralB] = { corral: corralB, comuna: p.aveB.comuna || '-', pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+        }
+
+        if (p.resultado) {
+          stats[corralA].pj++;
+          stats[corralB].pj++;
+
+          if (p.resultado === 'A') {
+            stats[corralA].pg++;
+            stats[corralA].pts += 3;
+            stats[corralB].pp++;
+          } else if (p.resultado === 'B') {
+            stats[corralB].pg++;
+            stats[corralB].pts += 3;
+            stats[corralA].pp++;
+          } else if (p.resultado === 'TABLA') {
+            stats[corralA].pe++;
+            stats[corralA].pts += 1;
+            stats[corralB].pe++;
+            stats[corralB].pts += 1;
+          }
+        }
+      });
+
+      const rankingList = Object.values(stats).sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.pg !== a.pg) return b.pg - a.pg;
+        return a.corral.localeCompare(b.corral);
+      });
+
+      if (rankingList.length === 0) {
+        alert('No hay datos de corrales o resultados para generar el ranking.');
+        return;
+      }
+
+      // Encabezado del PDF
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, 210, 26, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('TABLA DE POSICIONES Y RANKING DE CORRALES', 14, 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.text(`Fecha: ${fechaHoy} | Criterio: Ganada = 3 pts, Tabla = 1 pt, Perdida = 0 pts`, 14, 20);
+
+      const tableRows = rankingList.map((item, idx) => [
+        `${idx + 1}°`,
+        item.corral,
+        item.comuna,
+        item.pj,
+        item.pg,
+        item.pe,
+        item.pp,
+        `${item.pts} pts`
+      ]);
+
+      doc.autoTable({
+        head: [['Pos', 'Corral', 'Comuna', 'PJ', 'PG', 'PE', 'PP', 'Puntos']],
+        body: tableRows,
+        startY: 32,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [217, 119, 6], // amber-600
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [30, 41, 59],
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 60, fontStyle: 'bold' },
+          2: { cellWidth: 45 },
+          3: { cellWidth: 15, halign: 'center' },
+          4: { cellWidth: 15, halign: 'center' },
+          5: { cellWidth: 15, halign: 'center' },
+          6: { cellWidth: 15, halign: 'center' },
+          7: { cellWidth: 20, halign: 'right', fontStyle: 'bold' }
+        },
+        styles: {
+          cellPadding: 3
+        },
+        alternateRowStyles: {
+          fillColor: [254, 252, 232] // amber-50
+        }
+      });
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(`Página ${i} de ${pageCount} - Generado por Control de Aves`, 14, 288);
+      }
+
+      const filename = `Ranking_Corrales_${Date.now()}.pdf`;
+      compartirODescargarPDF(
+        doc,
+        filename,
+        'Ranking Oficial de Corrales',
+        `Adjunto la tabla oficial de posiciones y ranking de corrales (${fechaHoy}).`
+      );
+    }
+
   </script>
 </body>
 </html>
