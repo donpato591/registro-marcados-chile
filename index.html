@@ -38,7 +38,7 @@
   <!-- BARRA SUPERIOR (HEADER)                   -->
   <!-- ========================================== -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
-    <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+    <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
       <div class="flex items-center gap-3">
         <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl border border-emerald-500/20">
           <i data-lucide="feather" class="w-6 h-6"></i>
@@ -194,7 +194,7 @@
   </main>
 
   <!-- ========================================== -->
-  <!-- MODAL DE AGREGAR / EDITAR AVE (BOTONES GRANDES) -->
+  <!-- MODAL DE AGREGAR / EDITAR AVE             -->
   <!-- ========================================== -->
   <div id="aveModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
@@ -282,6 +282,48 @@
           </div>
         </div>
 
+        <!-- Fotografía del Ave (Solo Cámara en Vivo) -->
+        <div class="space-y-2 pt-1">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            Fotografía del Ave
+          </label>
+          
+          <div class="flex items-center gap-3 p-3 bg-slate-950/70 border border-slate-800 rounded-2xl">
+            <!-- Vista Previa de la Foto Capturada -->
+            <div id="photoPreviewContainer" class="relative w-24 h-24 sm:w-28 sm:h-28 bg-slate-900 border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center text-slate-500 overflow-hidden shrink-0">
+              <img id="photoPreviewImg" src="" alt="Vista previa" class="hidden w-full h-full object-cover" />
+              <div id="photoPreviewPlaceholder" class="flex flex-col items-center gap-1 text-center p-2">
+                <i data-lucide="camera" class="w-6 h-6 text-slate-500"></i>
+                <span class="text-[10px] text-slate-400">Sin foto</span>
+              </div>
+              <button
+                type="button"
+                id="btnRemovePhoto"
+                onclick="removePhoto()"
+                class="hidden absolute top-1 right-1 p-1 bg-black/80 hover:bg-rose-950 text-rose-300 rounded-lg transition"
+                title="Quitar foto"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Botón Único: Tomar Foto con Cámara -->
+            <div class="w-full space-y-2 flex-1">
+              <button
+                type="button"
+                onclick="openCameraModal()"
+                class="touch-btn w-full py-3 px-4 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition shadow-sm"
+              >
+                <i data-lucide="camera" class="w-5 h-5 text-emerald-400"></i>
+                <span>Tomar foto con cámara</span>
+              </button>
+              <p class="text-[11px] text-slate-400 leading-tight">
+                Abre la cámara en vivo en tu celular o PC (soporta webcams como Iriun).
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Botones de Acción Grandes -->
         <div class="pt-3 flex flex-col sm:flex-row gap-2.5">
           <button
@@ -301,6 +343,102 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE CÁMARA EN VIVO                   -->
+  <!-- ========================================== -->
+  <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-xl w-full max-h-[96vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in fade-in slide-in-from-bottom duration-200 flex flex-col">
+      
+      <!-- Encabezado del Modal de Cámara -->
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="camera" class="w-5 h-5 text-emerald-400"></i>
+            <span>Cámara en Vivo</span>
+          </h3>
+        </div>
+        <button onclick="closeCameraModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Alerta de permisos o errores de cámara -->
+      <div id="cameraAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <!-- Selector de Cámaras (Webcams / Iriun / Delantera / Trasera) -->
+      <div id="cameraSelectContainer" class="hidden space-y-1">
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Seleccionar Dispositivo de Cámara</label>
+        <div class="relative">
+          <select
+            id="cameraSelect"
+            onchange="handleCameraSelectChange(this.value)"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 transition pr-8"
+          >
+            <!-- Llenado dinámicamente con enumerateDevices -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Visor de Video en Vivo / Foto Capturada -->
+      <div class="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center min-h-[240px] max-h-[60vh]">
+        <!-- Video en Vivo -->
+        <video id="cameraVideo" autoplay playsinline muted class="w-full h-auto max-h-[60vh] object-contain rounded-2xl"></video>
+
+        <!-- Canvas invisible para procesamiento de captura -->
+        <canvas id="cameraCanvas" class="hidden"></canvas>
+
+        <!-- Vista Previa de la Foto Capturada (Oculta hasta capturar) -->
+        <div id="cameraCapturedContainer" class="hidden w-full h-full flex items-center justify-center">
+          <img id="cameraCapturedImg" src="" alt="Captura" class="w-full h-auto max-h-[60vh] object-contain rounded-2xl" />
+        </div>
+      </div>
+
+      <!-- Controles de Acción de la Cámara -->
+      <div class="pt-1 space-y-2">
+        <!-- Estado 1: Botón para Capturar Foto -->
+        <div id="cameraLiveControls" class="flex gap-2">
+          <button
+            type="button"
+            onclick="closeCameraModal()"
+            class="touch-btn w-1/3 py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs sm:text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onclick="capturePhotoFromVideo()"
+            class="touch-btn w-2/3 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-sm sm:text-base shadow-lg shadow-emerald-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="circle-dot" class="w-5 h-5 text-white animate-pulse"></i>
+            <span>Capturar Foto</span>
+          </button>
+        </div>
+
+        <!-- Estado 2: Botones posteriores a la captura (Repetir / Usar esta foto) -->
+        <div id="cameraCapturedControls" class="hidden flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            onclick="retakePhoto()"
+            class="touch-btn w-full sm:w-1/2 py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5"
+          >
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-slate-400"></i>
+            <span>Repetir foto</span>
+          </button>
+          <button
+            type="button"
+            onclick="confirmCapturedPhoto()"
+            class="touch-btn w-full sm:w-1/2 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-sm sm:text-base shadow-lg shadow-emerald-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check" class="w-5 h-5"></i>
+            <span>Usar esta foto</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -437,6 +575,26 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- MODAL VISOR DE FOTO EN PANTALLA COMPLETA    -->
+  <!-- ========================================== -->
+  <div id="imageLightboxModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-6" onclick="closeImageLightbox()">
+    <div class="relative max-w-3xl w-full flex flex-col items-center max-h-[95vh]" onclick="event.stopPropagation()">
+      <div class="w-full flex items-center justify-between pb-3 text-white px-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="feather" class="w-5 h-5 text-emerald-400"></i>
+          <span id="lightboxPlacaTitle" class="font-mono font-bold text-lg text-emerald-400"></span>
+        </div>
+        <button onclick="closeImageLightbox()" class="p-2 text-slate-300 hover:text-white rounded-xl bg-slate-800/80 hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+      <div class="w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[80vh]">
+        <img id="lightboxImg" src="" alt="Foto de ave" class="w-auto h-auto max-h-[80vh] max-w-full object-contain rounded-2xl" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- JAVASCRIPT PURO (VANILLA JS + SUPABASE)    -->
   <!-- ========================================== -->
   <script>
@@ -451,10 +609,16 @@
     let supabaseClient = null;
     let realtimeAvesChannel = null;
     let realtimeCorralesChannel = null;
-    let avesData = [];         // Fuente de verdad de aves
-    let corralesData = [];     // Fuente de verdad de corrales
-    let editingPlaca = null;   // Modo edición si contiene la placa
-    let currentUser = null;    // Usuario autenticado (administrador)
+    let avesData = [];             // Fuente de verdad de aves
+    let corralesData = [];         // Fuente de verdad de corrales
+    let editingPlaca = null;       // Modo edición si contiene la placa
+    let currentUser = null;        // Usuario autenticado (administrador)
+    
+    // Variables de Estado de Cámara y Foto
+    let currentCameraStream = null;  // Stream en vivo de MediaStream
+    let selectedPhotoBlob = null;    // Blob final listo para subir a Supabase
+    let capturedTempBlob = null;     // Blob temporal en la vista previa del modal de cámara
+    let currentAvePhotoUrl = null;   // URL de la foto existente en edición
 
     // Inicialización al cargar el DOM
     document.addEventListener('DOMContentLoaded', () => {
@@ -642,6 +806,278 @@
     }
 
     // =========================================================================
+    // CÁMARA EN VIVO (getUserMedia, enumerateDevices, 1280px JPEG 0.7)
+    // =========================================================================
+    async function openCameraModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      
+      hideCameraAlert();
+      resetCameraModalState();
+      document.getElementById('cameraModal').classList.remove('hidden');
+      lucide.createIcons();
+
+      const savedDeviceId = localStorage.getItem('preferredCameraId');
+      await startCameraStream(savedDeviceId || null);
+    }
+
+    function closeCameraModal() {
+      stopCameraStream();
+      document.getElementById('cameraModal').classList.add('hidden');
+    }
+
+    function stopCameraStream() {
+      if (currentCameraStream) {
+        currentCameraStream.getTracks().forEach(track => track.stop());
+        currentCameraStream = null;
+      }
+      const video = document.getElementById('cameraVideo');
+      if (video) video.srcObject = null;
+    }
+
+    function resetCameraModalState() {
+      capturedTempBlob = null;
+      document.getElementById('cameraVideo').classList.remove('hidden');
+      document.getElementById('cameraCapturedContainer').classList.add('hidden');
+      document.getElementById('cameraLiveControls').classList.remove('hidden');
+      document.getElementById('cameraCapturedControls').classList.add('hidden');
+    }
+
+    async function startCameraStream(preferredDeviceId = null) {
+      stopCameraStream();
+      hideCameraAlert();
+
+      const videoEl = document.getElementById('cameraVideo');
+
+      let videoConstraints = {};
+      if (preferredDeviceId) {
+        videoConstraints = { deviceId: { exact: preferredDeviceId } };
+      } else {
+        // En celular prefiere la cámara trasera
+        videoConstraints = { facingMode: { ideal: "environment" } };
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: false
+        });
+
+        currentCameraStream = stream;
+        videoEl.srcObject = stream;
+        await videoEl.play();
+
+        // Una vez otorgado el permiso, listar los dispositivos con sus nombres reales
+        await listCameraDevices(preferredDeviceId);
+
+      } catch (err) {
+        console.error("Error al iniciar cámara:", err);
+        // Si falló por constraint específica de deviceId, intentar con configuración genérica
+        if (preferredDeviceId && (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError')) {
+          localStorage.removeItem('preferredCameraId');
+          await startCameraStream(null);
+          return;
+        }
+        handleCameraError(err);
+      }
+    }
+
+    async function listCameraDevices(activeDeviceId = null) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        const selectContainer = document.getElementById('cameraSelectContainer');
+        const selectEl = document.getElementById('cameraSelect');
+
+        if (videoDevices.length === 0) {
+          selectContainer.classList.add('hidden');
+          return;
+        }
+
+        // Determinar qué track está activo en el stream
+        let currentTrackDeviceId = null;
+        if (currentCameraStream) {
+          const videoTrack = currentCameraStream.getVideoTracks()[0];
+          if (videoTrack) {
+            const settings = videoTrack.getSettings();
+            currentTrackDeviceId = settings.deviceId;
+          }
+        }
+
+        selectEl.innerHTML = videoDevices.map((dev, index) => {
+          const label = dev.label || `Cámara ${index + 1} (${dev.deviceId.slice(0, 5)}...)`;
+          const isSelected = (dev.deviceId === currentTrackDeviceId || dev.deviceId === activeDeviceId) ? 'selected' : '';
+          return `<option value="${escapeHtml(dev.deviceId)}" ${isSelected}>${escapeHtml(label)}</option>`;
+        }).join('');
+
+        // Mostrar selector si hay más de 1 cámara disponible
+        if (videoDevices.length > 1) {
+          selectContainer.classList.remove('hidden');
+        } else {
+          selectContainer.classList.add('hidden');
+        }
+
+      } catch (err) {
+        console.warn("No se pudieron enumerar dispositivos de cámara:", err);
+      }
+    }
+
+    async function handleCameraSelectChange(deviceId) {
+      if (!deviceId) return;
+      localStorage.setItem('preferredCameraId', deviceId);
+      await startCameraStream(deviceId);
+    }
+
+    function handleCameraError(err) {
+      let msg = "No se pudo acceder a la cámara.";
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = "Permiso de cámara denegado. Permite el acceso a la cámara en los ajustes del navegador para tomar la foto.";
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = "No se encontró ninguna cámara conectada o disponible en este dispositivo.";
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        msg = "La cámara está siendo utilizada por otra aplicación o pestaña del navegador.";
+      } else if (err.message) {
+        msg = err.message;
+      }
+      showCameraAlert(msg);
+    }
+
+    function showCameraAlert(msg) {
+      const alertBox = document.getElementById('cameraAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = 'p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5 bg-rose-950/90 border border-rose-700/60 text-rose-200';
+      alertBox.innerHTML = `
+        <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 mt-0.5 text-rose-400"></i>
+        <span>${escapeHtml(msg)}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideCameraAlert() {
+      const alertBox = document.getElementById('cameraAlert');
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML = '';
+    }
+
+    function capturePhotoFromVideo() {
+      const video = document.getElementById('cameraVideo');
+      const canvas = document.getElementById('cameraCanvas');
+      if (!video || !video.videoWidth || !video.videoHeight) {
+        showCameraAlert("La cámara aún no está transmitiendo imagen.");
+        return;
+      }
+
+      // Reducir la imagen a un máximo de 1280 px de ancho conservando el aspecto
+      const originalWidth = video.videoWidth;
+      const originalHeight = video.videoHeight;
+      const MAX_WIDTH = 1280;
+
+      let targetWidth = originalWidth;
+      let targetHeight = originalHeight;
+
+      if (originalWidth > MAX_WIDTH) {
+        targetWidth = MAX_WIDTH;
+        targetHeight = Math.round((originalHeight * MAX_WIDTH) / originalWidth);
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+      // Exportar en JPEG calidad 0.7
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          showCameraAlert("Error al procesar la imagen.");
+          return;
+        }
+        capturedTempBlob = blob;
+        const capturedImg = document.getElementById('cameraCapturedImg');
+        capturedImg.src = URL.createObjectURL(blob);
+
+        // Mostrar vista previa capturada y controles posteriores
+        document.getElementById('cameraVideo').classList.add('hidden');
+        document.getElementById('cameraCapturedContainer').classList.remove('hidden');
+        document.getElementById('cameraLiveControls').classList.add('hidden');
+        document.getElementById('cameraCapturedControls').classList.remove('hidden');
+        lucide.createIcons();
+      }, 'image/jpeg', 0.7);
+    }
+
+    function retakePhoto() {
+      capturedTempBlob = null;
+      document.getElementById('cameraVideo').classList.remove('hidden');
+      document.getElementById('cameraCapturedContainer').classList.add('hidden');
+      document.getElementById('cameraLiveControls').classList.remove('hidden');
+      document.getElementById('cameraCapturedControls').classList.add('hidden');
+    }
+
+    function confirmCapturedPhoto() {
+      if (!capturedTempBlob) return;
+      selectedPhotoBlob = capturedTempBlob;
+      currentAvePhotoUrl = null;
+
+      // Actualizar vista previa en el formulario de Ave
+      const previewImg = document.getElementById('photoPreviewImg');
+      previewImg.src = URL.createObjectURL(capturedTempBlob);
+      setPhotoPreview(previewImg.src);
+
+      // Detener cámara y cerrar modal
+      stopCameraStream();
+      closeCameraModal();
+    }
+
+    function setPhotoPreview(url) {
+      const img = document.getElementById('photoPreviewImg');
+      const placeholder = document.getElementById('photoPreviewPlaceholder');
+      const btnRemove = document.getElementById('btnRemovePhoto');
+
+      if (!img || !placeholder || !btnRemove) return;
+
+      if (url) {
+        img.src = url;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        btnRemove.classList.remove('hidden');
+      } else {
+        img.src = '';
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        btnRemove.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function removePhoto() {
+      selectedPhotoBlob = null;
+      capturedTempBlob = null;
+      currentAvePhotoUrl = null;
+      setPhotoPreview(null);
+    }
+
+    function openImageLightbox(url, placa) {
+      const modal = document.getElementById('imageLightboxModal');
+      const img = document.getElementById('lightboxImg');
+      const title = document.getElementById('lightboxPlacaTitle');
+      if (!modal || !img || !title) return;
+
+      img.src = url;
+      title.textContent = `Placa: ${placa}`;
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeImageLightbox() {
+      const modal = document.getElementById('imageLightboxModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // =========================================================================
     // 2. SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
     // =========================================================================
     function setupRealtimeSubscriptions() {
@@ -777,7 +1213,6 @@
       }
     }
 
-    // Retorna la lista unificada de nombres de corrales (desde corralesData y avesData)
     function getCorralesList() {
       const names = new Set();
       corralesData.forEach(c => {
@@ -814,7 +1249,6 @@
         return;
       }
 
-      // Agrupar y contar registros por corral
       const corralCounts = {};
       allCorrales.forEach(c => { corralCounts[c] = 0; });
       
@@ -1049,8 +1483,22 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             ${matches.map(ave => `
               <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-2">
-                <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2">
-                  <span class="text-xl font-black font-mono text-emerald-400 tracking-wider">${escapeHtml(ave.placa)}</span>
+                <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2 gap-2">
+                  <div class="flex items-center gap-2.5">
+                    ${ave.foto_url ? `
+                      <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shrink-0 hover:border-emerald-400 transition group cursor-pointer" title="Ver foto en grande">
+                        <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                      </button>
+                    ` : `
+                      <div class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
+                        <i data-lucide="feather" class="w-5 h-5"></i>
+                      </div>
+                    `}
+                    <div>
+                      <span class="text-xl font-black font-mono text-emerald-400 tracking-wider block leading-tight">${escapeHtml(ave.placa)}</span>
+                      <span class="text-[11px] text-slate-400">${escapeHtml(ave.corral || 'Sin Corral')}</span>
+                    </div>
+                  </div>
                   ${isAdmin() ? `
                   <div class="flex gap-1.5">
                     <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition touch-btn flex items-center gap-1">
@@ -1126,7 +1574,6 @@
         html += `<option value="${escapeHtml(c)}" ${selected}>${escapeHtml(c)}</option>`;
       });
 
-      // Si el ave tiene un corral previo que no está en la lista, incluirlo
       if (currentValue && !corrales.includes(currentValue)) {
         html += `<option value="${escapeHtml(currentValue)}" selected>${escapeHtml(currentValue)}</option>`;
       }
@@ -1175,9 +1622,22 @@
             <div class="bg-slate-950 border border-slate-800 hover:border-slate-700 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-md">
               <div class="space-y-2">
                 <div class="flex items-start justify-between gap-2">
-                  <span class="text-lg font-bold font-mono text-emerald-400 uppercase tracking-wide">
-                    ${escapeHtml(ave.placa)}
-                  </span>
+                  <div class="flex items-center gap-2.5">
+                    ${ave.foto_url ? `
+                      <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 shrink-0 hover:border-emerald-500 transition group cursor-pointer" title="Ver foto en grande">
+                        <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                      </button>
+                    ` : `
+                      <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                        <i data-lucide="feather" class="w-5 h-5 text-slate-600"></i>
+                      </div>
+                    `}
+                    <div>
+                      <span class="text-lg font-bold font-mono text-emerald-400 uppercase tracking-wide block leading-tight">
+                        ${escapeHtml(ave.placa)}
+                      </span>
+                    </div>
+                  </div>
                   <span class="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                     ${escapeHtml(ave.corral || 'Sin Corral')}
                   </span>
@@ -1236,6 +1696,7 @@
       document.getElementById('btnSubmitText').textContent = 'Guardar Ave';
       document.getElementById('inputPlacaHelp').textContent = 'Identificador único irrepetible.';
       
+      removePhoto();
       populateModalCorralSelect('');
       
       // Sugerir fecha de hoy
@@ -1250,6 +1711,7 @@
     function closeAveModal() {
       document.getElementById('aveModal').classList.add('hidden');
       editingPlaca = null;
+      removePhoto();
     }
 
     function startEdit(placa) {
@@ -1269,6 +1731,14 @@
       document.getElementById('inputComuna').value = ave.comuna || '';
       
       populateModalCorralSelect(ave.corral || '');
+
+      if (ave.foto_url) {
+        currentAvePhotoUrl = ave.foto_url;
+        selectedPhotoBlob = null;
+        setPhotoPreview(ave.foto_url);
+      } else {
+        removePhoto();
+      }
 
       document.getElementById('modalTitle').textContent = 'Editar Registro';
       document.getElementById('btnSubmitText').textContent = 'Actualizar Ave';
@@ -1292,26 +1762,55 @@
 
       const placa = document.getElementById('inputPlaca').value.trim().toUpperCase();
       
-      // Validación obligatoria de placa
       if (!placa) {
         showModalAlert('El código de placa es obligatorio.', 'error');
         return;
       }
-
-      const payload = {
-        placa: placa,
-        fecha_marcaje: document.getElementById('inputFechaMarcaje').value || null,
-        fecha_nacimiento: document.getElementById('inputFechaNacimiento').value || null,
-        responsable: document.getElementById('inputResponsable').value.trim() || null,
-        comuna: document.getElementById('inputComuna').value.trim() || null,
-        corral: document.getElementById('inputCorral').value.trim() || null
-      };
 
       const btnSubmit = document.getElementById('btnSubmitModal');
       btnSubmit.disabled = true;
       document.getElementById('btnSubmitText').textContent = 'Guardando en Supabase...';
 
       try {
+        let fotoUrl = currentAvePhotoUrl;
+
+        // Si se tomó una foto nueva con la cámara, subirla a Supabase Storage (bucket fotos-aves)
+        if (selectedPhotoBlob) {
+          document.getElementById('btnSubmitText').textContent = 'Subiendo fotografía...';
+          const safePlaca = placa.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const filePath = `${safePlaca}_${Date.now()}.jpg`;
+
+          const { error: uploadError } = await supabaseClient
+            .storage
+            .from('fotos-aves')
+            .upload(filePath, selectedPhotoBlob, {
+              upsert: true,
+              contentType: 'image/jpeg'
+            });
+
+          if (uploadError) {
+            console.warn("Aviso al subir foto a Storage:", uploadError);
+            throw new Error(`Error al subir foto: ${uploadError.message}. Asegúrate de que el bucket 'fotos-aves' existe y tiene permisos en Supabase.`);
+          }
+
+          const { data: { publicUrl } } = supabaseClient
+            .storage
+            .from('fotos-aves')
+            .getPublicUrl(filePath);
+
+          fotoUrl = publicUrl;
+        }
+
+        const payload = {
+          placa: placa,
+          fecha_marcaje: document.getElementById('inputFechaMarcaje').value || null,
+          fecha_nacimiento: document.getElementById('inputFechaNacimiento').value || null,
+          responsable: document.getElementById('inputResponsable').value.trim() || null,
+          comuna: document.getElementById('inputComuna').value.trim() || null,
+          corral: document.getElementById('inputCorral').value.trim() || null,
+          foto_url: fotoUrl || null
+        };
+
         if (editingPlaca) {
           // ACTUALIZAR (UPDATE)
           const { error } = await supabaseClient
@@ -1328,7 +1827,6 @@
             .insert([payload]);
 
           if (error) {
-            // Error 23505 = Clave primaria duplicada en PostgreSQL
             if (error.code === '23505') {
               throw new Error(`¡La placa "${placa}" YA EXISTE! No se permiten placas duplicadas.`);
             }
