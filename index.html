@@ -8,7 +8,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -55,11 +54,32 @@
         </div>
       </div>
 
-      <!-- Botón Principal "Agregar Ave" (Grande para móvil) -->
-      <button onclick="openAveModal()" class="touch-btn px-4 py-3 sm:px-5 sm:py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl text-sm sm:text-base shadow-lg shadow-emerald-950/60 transition flex items-center gap-2 cursor-pointer">
-        <i data-lucide="plus-circle" class="w-5 h-5"></i>
-        <span>Agregar Ave</span>
-      </button>
+      <!-- Controles de Autenticación / Acciones de Administrador -->
+      <div id="authActions" class="flex items-center gap-2 flex-wrap justify-end">
+        <!-- Botón Iniciar Sesión (visible para visitantes sin sesión) -->
+        <button id="btnOpenLogin" onclick="openLoginModal()" class="touch-btn px-3 py-2 sm:px-4 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium rounded-xl text-xs sm:text-sm border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+          <span>Acceso Administrador</span>
+        </button>
+
+        <!-- Botón Gestionar Corrales (solo visible para admin autenticado) -->
+        <button id="btnOpenCorrales" onclick="openCorralesModal()" class="hidden touch-btn px-3 py-2 sm:px-3.5 sm:py-2 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-200 font-semibold rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-400"></i>
+          <span>Gestionar Corrales</span>
+        </button>
+
+        <!-- Botón Agregar Ave (solo visible para admin autenticado) -->
+        <button id="btnOpenAdd" onclick="openAveModal()" class="hidden touch-btn px-3 py-2 sm:px-4 sm:py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-emerald-950/60 transition flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Agregar Ave</span>
+        </button>
+
+        <!-- Botón Cerrar Sesión (solo visible para admin autenticado) -->
+        <button id="btnLogout" onclick="handleLogout()" class="hidden touch-btn px-2.5 py-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-rose-950/50 hover:border-rose-700/60 text-slate-400 hover:text-rose-300 rounded-xl text-xs sm:text-sm border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Cerrar Sesión">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>Cerrar Sesión</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -253,12 +273,12 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Corral</label>
-            <input
-              type="text"
+            <select
               id="inputCorral"
-              placeholder="Ej: Corral 1 / Sector A"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
-            />
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+            >
+              <option value="">-- Sin Corral / Seleccionar --</option>
+            </select>
           </div>
         </div>
 
@@ -285,21 +305,156 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- MODAL DE GESTIÓN DE CORRALES              -->
+  <!-- ========================================== -->
+  <div id="corralesModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layout-grid" class="w-6 h-6 text-indigo-400"></i>
+          <h3 class="text-lg sm:text-xl font-bold text-white">Gestionar Corrales</h3>
+        </div>
+        <button onclick="closeCorralesModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Alerta de corrales -->
+      <div id="corralModalAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <!-- Formulario para agregar nuevo corral -->
+      <form id="newCorralForm" onsubmit="handleCreateCorral(event)" class="space-y-3 p-4 bg-slate-950/80 rounded-2xl border border-slate-800">
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          Nuevo Corral
+        </label>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="inputNuevoCorralNombre"
+            required
+            placeholder="Ej: Corral 1 / Sector A"
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+          />
+          <button
+            type="submit"
+            id="btnAddCorralSubmit"
+            class="touch-btn px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-1.5 shrink-0"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Agregar</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Lista de corrales existentes -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">
+          <span>Corrales Registrados</span>
+          <span id="corralesTotalCount">0 corrales</span>
+        </div>
+        <div id="corralesListContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <!-- Renderizado dinámico de corrales -->
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button
+          type="button"
+          onclick="closeCorralesModal()"
+          class="touch-btn w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE LOGIN ADMINISTRADOR               -->
+  <!-- ========================================== -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="lock" class="w-6 h-6 text-emerald-400"></i>
+          <h3 class="text-lg sm:text-xl font-bold text-white">Acceso Administrador</h3>
+        </div>
+        <button onclick="closeLoginModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="loginAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200"></div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Correo Electrónico
+          </label>
+          <input
+            type="email"
+            id="loginEmail"
+            required
+            placeholder="admin@ejemplo.com"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Contraseña
+          </label>
+          <input
+            type="password"
+            id="loginPassword"
+            required
+            placeholder="••••••••"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeLoginModal()"
+            class="touch-btn w-full sm:w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnLoginSubmit"
+            class="touch-btn w-full sm:w-2/3 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span id="btnLoginText">Ingresar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- JAVASCRIPT PURO (VANILLA JS + SUPABASE)    -->
   <!-- ========================================== -->
   <script>
     // =========================================================================
     // PEGA AQUÍ TUS CREDENCIALES DE SUPABASE:
     // =========================================================================
-    const SUPABASE_URL = "https://lxxjvoimflzoevrmpguy.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_ZcbckNyWHEfwgxYNB-CFAw_kdjcIGGM";
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY";
     // =========================================================================
 
     // Variables de Estado de la Aplicación
     let supabaseClient = null;
-    let realtimeChannel = null;
-    let avesData = [];         // Fuente de verdad cargada y sincronizada desde Supabase
+    let realtimeAvesChannel = null;
+    let realtimeCorralesChannel = null;
+    let avesData = [];         // Fuente de verdad de aves
+    let corralesData = [];     // Fuente de verdad de corrales
     let editingPlaca = null;   // Modo edición si contiene la placa
+    let currentUser = null;    // Usuario autenticado (administrador)
 
     // Inicialización al cargar el DOM
     document.addEventListener('DOMContentLoaded', () => {
@@ -317,13 +472,30 @@
         // Inicializar cliente Supabase oficial
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // 1. Cargar datos iniciales desde Supabase
+        // 1. Obtener estado de sesión actual y mantenerla al recargar
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        currentUser = session ? session.user : null;
+        updateAuthUI();
+
+        // 2. Escuchar cambios de estado de autenticación (login, logout, token refresh)
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          currentUser = session ? session.user : null;
+          updateAuthUI();
+          renderAll();
+          const currentVerifierQuery = document.getElementById('verifierInput').value;
+          if (currentVerifierQuery.trim()) {
+            handleVerifierSearch(currentVerifierQuery);
+          }
+        });
+
+        // 3. Cargar corrales y aves iniciales desde Supabase (Lectura pública)
+        await fetchCorralesFromSupabase();
         await fetchAvesFromSupabase();
 
-        // 2. Suscribir a cambios en tiempo real
-        setupRealtimeSubscription();
+        // 4. Suscribir a cambios en tiempo real en aves y corrales
+        setupRealtimeSubscriptions();
 
-        // 3. Listener para el Verificador de Placas (Buscador instantáneo)
+        // 5. Listener para el Verificador de Placas (Buscador instantáneo)
         document.getElementById('verifierInput').addEventListener('input', (e) => {
           handleVerifierSearch(e.target.value);
         });
@@ -350,23 +522,146 @@
     }
 
     // =========================================================================
-    // 2. SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
+    // CONTROL DE AUTENTICACIÓN Y PERMISOS DE ADMINISTRADOR
     // =========================================================================
-    function setupRealtimeSubscription() {
-      if (!supabaseClient) return;
+    function isAdmin() {
+      return !!currentUser;
+    }
 
-      if (realtimeChannel) {
-        supabaseClient.removeChannel(realtimeChannel);
+    function updateAuthUI() {
+      const btnOpenLogin = document.getElementById('btnOpenLogin');
+      const btnOpenCorrales = document.getElementById('btnOpenCorrales');
+      const btnOpenAdd = document.getElementById('btnOpenAdd');
+      const btnLogout = document.getElementById('btnLogout');
+
+      if (isAdmin()) {
+        if (btnOpenLogin) btnOpenLogin.classList.add('hidden');
+        if (btnOpenCorrales) btnOpenCorrales.classList.remove('hidden');
+        if (btnOpenAdd) btnOpenAdd.classList.remove('hidden');
+        if (btnLogout) btnLogout.classList.remove('hidden');
+      } else {
+        if (btnOpenLogin) btnOpenLogin.classList.remove('hidden');
+        if (btnOpenCorrales) btnOpenCorrales.classList.add('hidden');
+        if (btnOpenAdd) btnOpenAdd.classList.add('hidden');
+        if (btnLogout) btnLogout.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function openLoginModal() {
+      document.getElementById('loginForm').reset();
+      hideLoginAlert();
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.getElementById('loginEmail').focus();
+      lucide.createIcons();
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+    }
+
+    function showLoginAlert(msg) {
+      const alertBox = document.getElementById('loginAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.innerHTML = `
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5 text-rose-400"></i>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideLoginAlert() {
+      const alertBox = document.getElementById('loginAlert');
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML = '';
+    }
+
+    function formatErrorMessage(err) {
+      if (!err) return 'Ocurrió un error inesperado.';
+      const msg = typeof err === 'string' ? err : (err.message || String(err));
+      const code = err && err.code;
+
+      if (code === '42501' || msg.includes('row-level security') || msg.includes('permission denied')) {
+        return 'No tienes permisos para realizar esta operación. Inicia sesión como administrador.';
+      }
+      if (code === '23505') {
+        return 'El identificador o nombre ingresado ya existe.';
+      }
+      if (msg.includes('Invalid login credentials')) {
+        return 'Correo o contraseña incorrectos. Verifica tus datos de acceso.';
+      }
+      if (msg.includes('Email not confirmed')) {
+        return 'El correo electrónico aún no ha sido confirmado en Supabase.';
+      }
+      if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+        return 'Demasiados intentos. Por favor espera unos minutos.';
+      }
+      return msg;
+    }
+
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      if (!supabaseClient) {
+        showLoginAlert('No hay conexión con Supabase.');
+        return;
       }
 
-      realtimeChannel = supabaseClient
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btnSubmit = document.getElementById('btnLoginSubmit');
+      const btnText = document.getElementById('btnLoginText');
+
+      btnSubmit.disabled = true;
+      btnText.textContent = 'Ingresando...';
+      hideLoginAlert();
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+        closeLoginModal();
+      } catch (err) {
+        console.error('Error al iniciar sesión:', err);
+        showLoginAlert(err);
+      } finally {
+        btnSubmit.disabled = false;
+        btnText.textContent = 'Ingresar';
+      }
+    }
+
+    async function handleLogout() {
+      if (!supabaseClient) return;
+      try {
+        await supabaseClient.auth.signOut();
+      } catch (err) {
+        console.error('Error cerrando sesión:', err);
+      }
+    }
+
+    // =========================================================================
+    // 2. SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
+    // =========================================================================
+    function setupRealtimeSubscriptions() {
+      if (!supabaseClient) return;
+
+      if (realtimeAvesChannel) {
+        supabaseClient.removeChannel(realtimeAvesChannel);
+      }
+      if (realtimeCorralesChannel) {
+        supabaseClient.removeChannel(realtimeCorralesChannel);
+      }
+
+      // Realtime Aves
+      realtimeAvesChannel = supabaseClient
         .channel('public:aves:cambios')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'aves' },
           (payload) => {
-            console.log('Evento Realtime recibido:', payload);
-            handleRealtimeEvent(payload);
+            handleRealtimeAveEvent(payload);
           }
         )
         .subscribe((status) => {
@@ -376,13 +671,24 @@
             updateStatusBadge(false, "Desconectado");
           }
         });
+
+      // Realtime Corrales
+      realtimeCorralesChannel = supabaseClient
+        .channel('public:corrales:cambios')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'corrales' },
+          (payload) => {
+            handleRealtimeCorralEvent(payload);
+          }
+        )
+        .subscribe();
     }
 
-    function handleRealtimeEvent(payload) {
+    function handleRealtimeAveEvent(payload) {
       const { eventType, new: newRow, old: oldRow } = payload;
 
       if (eventType === 'INSERT') {
-        // Añadir si no existe ya
         if (!avesData.some(a => a.placa === newRow.placa)) {
           avesData.unshift(newRow);
         }
@@ -397,14 +703,33 @@
         avesData = avesData.filter(a => a.placa !== oldRow.placa);
       }
 
-      // Re-renderizar toda la interfaz con los datos actualizados
       renderAll();
-
-      // Si el verificador de placas tiene texto activo, recalcularlo
       const currentVerifierQuery = document.getElementById('verifierInput').value;
       if (currentVerifierQuery.trim()) {
         handleVerifierSearch(currentVerifierQuery);
       }
+    }
+
+    function handleRealtimeCorralEvent(payload) {
+      const { eventType, new: newRow, old: oldRow } = payload;
+
+      if (eventType === 'INSERT') {
+        if (!corralesData.some(c => c.id === newRow.id || c.nombre === newRow.nombre)) {
+          corralesData.push(newRow);
+          corralesData.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = corralesData.findIndex(c => c.id === newRow.id);
+        if (idx !== -1) {
+          corralesData[idx] = newRow;
+        }
+        corralesData.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      } else if (eventType === 'DELETE') {
+        corralesData = corralesData.filter(c => c.id !== oldRow.id && c.nombre !== oldRow.nombre);
+      }
+
+      renderAll();
+      renderCorralesList();
     }
 
     async function fetchAvesFromSupabase() {
@@ -419,7 +744,25 @@
         avesData = data || [];
         renderAll();
       } catch (err) {
-        console.error("Error al obtener datos:", err);
+        console.error("Error al obtener datos de aves:", err);
+      }
+    }
+
+    async function fetchCorralesFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('corrales')
+          .select('*')
+          .order('nombre', { ascending: true });
+
+        if (!error && data) {
+          corralesData = data;
+        } else if (error) {
+          console.warn("Tabla corrales aún no existe o no tiene permisos:", error.message);
+        }
+      } catch (err) {
+        console.warn("Aviso al cargar corrales:", err);
       }
     }
 
@@ -432,6 +775,18 @@
         badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-950/80 text-rose-400 border border-rose-800/60";
         badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> ${text}`;
       }
+    }
+
+    // Retorna la lista unificada de nombres de corrales (desde corralesData y avesData)
+    function getCorralesList() {
+      const names = new Set();
+      corralesData.forEach(c => {
+        if (c.nombre && c.nombre.trim()) names.add(c.nombre.trim());
+      });
+      avesData.forEach(a => {
+        if (a.corral && a.corral.trim()) names.add(a.corral.trim());
+      });
+      return Array.from(names).sort((a, b) => a.localeCompare(b));
     }
 
     // =========================================================================
@@ -451,7 +806,9 @@
       const container = document.getElementById('corralCardsContainer');
       const countLabel = document.getElementById('corralCountLabel');
 
-      if (!avesData || avesData.length === 0) {
+      const allCorrales = getCorralesList();
+
+      if (allCorrales.length === 0 && avesData.length === 0) {
         container.innerHTML = `<p class="col-span-full text-xs text-slate-500 py-2">Sin datos de corrales aún.</p>`;
         countLabel.textContent = "0 corrales";
         return;
@@ -459,16 +816,22 @@
 
       // Agrupar y contar registros por corral
       const corralCounts = {};
+      allCorrales.forEach(c => { corralCounts[c] = 0; });
+      
       avesData.forEach(ave => {
-        const c = (ave.corral || '').trim() || 'Sin Corral';
-        corralCounts[c] = (corralCounts[c] || 0) + 1;
+        const c = (ave.corral || '').trim();
+        if (c) {
+          corralCounts[c] = (corralCounts[c] || 0) + 1;
+        } else {
+          corralCounts['Sin Corral'] = (corralCounts['Sin Corral'] || 0) + 1;
+        }
       });
 
-      const uniqueCorrales = Object.keys(corralCounts).sort();
-      countLabel.textContent = `${uniqueCorrales.length} ${uniqueCorrales.length === 1 ? 'corral' : 'corrales'}`;
+      const displayCorrales = Object.keys(corralCounts).filter(c => corralCounts[c] > 0 || corralesData.some(cd => cd.nombre === c)).sort();
+      countLabel.textContent = `${displayCorrales.length} ${displayCorrales.length === 1 ? 'corral activo' : 'corrales activos'}`;
 
-      container.innerHTML = uniqueCorrales.map(corralName => {
-        const count = corralCounts[corralName];
+      container.innerHTML = displayCorrales.map(corralName => {
+        const count = corralCounts[corralName] || 0;
         return `
           <div onclick="filterByCorralCard('${escapeHtml(corralName)}')" class="bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-xl transition cursor-pointer flex flex-col justify-between touch-btn group">
             <span class="text-xs font-semibold text-slate-400 group-hover:text-indigo-300 truncate" title="${escapeHtml(corralName)}">
@@ -491,6 +854,160 @@
     }
 
     // =========================================================================
+    // GESTIÓN DE CORRALES (MODAL + CRUD)
+    // =========================================================================
+    function openCorralesModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      hideCorralAlert();
+      document.getElementById('newCorralForm').reset();
+      renderCorralesList();
+      document.getElementById('corralesModal').classList.remove('hidden');
+      document.getElementById('inputNuevoCorralNombre').focus();
+      lucide.createIcons();
+    }
+
+    function closeCorralesModal() {
+      document.getElementById('corralesModal').classList.add('hidden');
+    }
+
+    function showCorralAlert(msg, type = 'error') {
+      const alertBox = document.getElementById('corralModalAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = type === 'error'
+        ? 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200'
+        : 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-emerald-950/80 border border-emerald-700/60 text-emerald-200';
+      alertBox.innerHTML = `
+        <i data-lucide="${type === 'error' ? 'alert-octagon' : 'check-circle'}" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideCorralAlert() {
+      document.getElementById('corralModalAlert').classList.add('hidden');
+    }
+
+    function renderCorralesList() {
+      const container = document.getElementById('corralesListContainer');
+      const countLabel = document.getElementById('corralesTotalCount');
+      if (!container) return;
+
+      const corrales = getCorralesList();
+      countLabel.textContent = `${corrales.length} ${corrales.length === 1 ? 'corral' : 'corrales'}`;
+
+      if (corrales.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">No hay corrales registrados aún.</p>`;
+        return;
+      }
+
+      container.innerHTML = corrales.map(nombre => {
+        const avesCount = avesData.filter(a => (a.corral || '').trim() === nombre).length;
+        const corralObj = corralesData.find(c => c.nombre === nombre);
+        const corralId = corralObj ? corralObj.id : null;
+
+        return `
+          <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition">
+            <div>
+              <span class="text-sm font-semibold text-white">${escapeHtml(nombre)}</span>
+              <span class="text-xs text-slate-400 block">${avesCount} ${avesCount === 1 ? 'ave asignada' : 'aves asignadas'}</span>
+            </div>
+            <button
+              onclick="deleteCorral('${escapeHtml(nombre)}', ${corralId ? `'${corralId}'` : 'null'})"
+              class="touch-btn p-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition border border-rose-800/40"
+              title="Eliminar Corral"
+            >
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+              <span>Eliminar</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    async function handleCreateCorral(event) {
+      event.preventDefault();
+      if (!isAdmin()) {
+        showCorralAlert('Debes ser administrador.', 'error');
+        return;
+      }
+      if (!supabaseClient) {
+        showCorralAlert('No hay conexión con Supabase.', 'error');
+        return;
+      }
+
+      const input = document.getElementById('inputNuevoCorralNombre');
+      const nombre = input.value.trim();
+      if (!nombre) return;
+
+      const btn = document.getElementById('btnAddCorralSubmit');
+      btn.disabled = true;
+      hideCorralAlert();
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('corrales')
+          .insert([{ nombre }]);
+
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error(`El corral "${nombre}" ya existe.`);
+          }
+          throw error;
+        }
+
+        input.value = '';
+        await fetchCorralesFromSupabase();
+        renderAll();
+        renderCorralesList();
+        showCorralAlert(`Corral "${nombre}" creado exitosamente.`, 'success');
+      } catch (err) {
+        console.error("Error al crear corral:", err);
+        showCorralAlert(err.message || 'Error al crear el corral.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function deleteCorral(nombre, id) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+
+      const avesAsociadas = avesData.filter(a => (a.corral || '').trim() === nombre).length;
+      let msg = `¿Confirmas que deseas eliminar el corral "${nombre}"?`;
+      if (avesAsociadas > 0) {
+        msg += `\nNota: Hay ${avesAsociadas} ave(s) asociadas a este corral.`;
+      }
+
+      if (!confirm(msg)) return;
+
+      try {
+        let query = supabaseClient.from('corrales').delete();
+        if (id) {
+          query = query.eq('id', id);
+        } else {
+          query = query.eq('nombre', nombre);
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+
+        await fetchCorralesFromSupabase();
+        renderAll();
+        renderCorralesList();
+        showCorralAlert(`Corral "${nombre}" eliminado.`, 'success');
+      } catch (err) {
+        console.error("Error al eliminar corral:", err);
+        showCorralAlert(err.message || 'Error al eliminar corral.', 'error');
+      }
+    }
+
+    // =========================================================================
     // 4. VERIFICADOR DE PLACAS (ILIKE / PARCIAL Y SIN DISTINGUIR MAYÚSCULAS)
     // =========================================================================
     function handleVerifierSearch(rawQuery) {
@@ -508,7 +1025,6 @@
       btnClear.classList.remove('hidden');
       resultBox.classList.remove('hidden');
 
-      // Buscar aves cuya placa contenga la subcadena (ilike simulado sobre datos en memoria)
       const matches = avesData.filter(ave => (ave.placa || '').toLowerCase().includes(query));
 
       if (matches.length === 0) {
@@ -525,7 +1041,6 @@
         return;
       }
 
-      // Si encuentra una o varias coincidencias
       resultBox.innerHTML = `
         <div class="space-y-2 animate-in fade-in duration-150">
           <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
@@ -536,11 +1051,13 @@
               <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-2">
                 <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2">
                   <span class="text-xl font-black font-mono text-emerald-400 tracking-wider">${escapeHtml(ave.placa)}</span>
+                  ${isAdmin() ? `
                   <div class="flex gap-1.5">
                     <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition touch-btn flex items-center gap-1">
                       <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
                     </button>
                   </div>
+                  ` : ''}
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-1">
                   <div><span class="text-slate-500 block">F. Marcaje:</span> <b class="text-slate-200">${ave.fecha_marcaje || '-'}</b></div>
@@ -575,18 +1092,16 @@
       const curComuna = selectComuna.value;
       const curResp = selectResp.value;
 
-      // Obtener valores únicos
-      const corrales = new Set();
+      const corrales = getCorralesList();
       const comunas = new Set();
       const responsables = new Set();
 
       avesData.forEach(a => {
-        if (a.corral) corrales.add(a.corral.trim());
         if (a.comuna) comunas.add(a.comuna.trim());
         if (a.responsable) responsables.add(a.responsable.trim());
       });
 
-      populateSelect(selectCorral, ['Todos los corrales', ...Array.from(corrales).sort()], curCorral);
+      populateSelect(selectCorral, ['Todos los corrales', ...corrales], curCorral);
       populateSelect(selectComuna, ['Todas las comunas', ...Array.from(comunas).sort()], curComuna);
       populateSelect(selectResp, ['Todos los responsables', ...Array.from(responsables).sort()], curResp);
     }
@@ -597,6 +1112,26 @@
         const selected = val === currentValue ? 'selected' : '';
         return `<option value="${escapeHtml(val)}" ${selected}>${escapeHtml(opt)}</option>`;
       }).join('');
+    }
+
+    function populateModalCorralSelect(currentValue = '') {
+      const select = document.getElementById('inputCorral');
+      if (!select) return;
+
+      const corrales = getCorralesList();
+      let html = `<option value="">-- Sin Corral / Seleccionar --</option>`;
+
+      corrales.forEach(c => {
+        const selected = c === currentValue ? 'selected' : '';
+        html += `<option value="${escapeHtml(c)}" ${selected}>${escapeHtml(c)}</option>`;
+      });
+
+      // Si el ave tiene un corral previo que no está en la lista, incluirlo
+      if (currentValue && !corrales.includes(currentValue)) {
+        html += `<option value="${escapeHtml(currentValue)}" selected>${escapeHtml(currentValue)}</option>`;
+      }
+
+      select.innerHTML = html;
     }
 
     function applyFilters() {
@@ -616,7 +1151,6 @@
       const filterComuna = document.getElementById('filterComuna').value.trim();
       const filterResp = document.getElementById('filterResponsable').value.trim();
 
-      // Filtrar arreglo
       const filtered = avesData.filter(ave => {
         if (filterCorral && (ave.corral || '').trim() !== filterCorral) return false;
         if (filterComuna && (ave.comuna || '').trim() !== filterComuna) return false;
@@ -635,7 +1169,6 @@
         return;
       }
 
-      // Renderizado en formato tarjetas (Cards táctiles muy amigables para celular y ordenadas en PC)
       container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           ${filtered.map(ave => `
@@ -670,7 +1203,8 @@
                 </div>
               </div>
 
-              <!-- Botones Grandes para Celular -->
+              ${isAdmin() ? `
+              <!-- Botones Grandes para Celular (Solo Administrador) -->
               <div class="pt-2 border-t border-slate-900 flex items-center justify-end gap-2">
                 <button onclick="startEdit('${escapeHtml(ave.placa)}')" class="touch-btn flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
                   <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i> Editar
@@ -679,6 +1213,7 @@
                   <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i> Eliminar
                 </button>
               </div>
+              ` : ''}
             </div>
           `).join('')}
         </div>
@@ -687,15 +1222,21 @@
     }
 
     // =========================================================================
-    // 1. CRUD Y MODAL (VALIDACIÓN + ERROR CLAVE DUPLICADA)
+    // 1. CRUD Y MODAL (VALIDACIÓN + ERROR CLAVE DUPLICADA + PROTECCIÓN ADMIN)
     // =========================================================================
     function openAveModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
       editingPlaca = null;
       document.getElementById('aveForm').reset();
       document.getElementById('inputPlaca').disabled = false;
       document.getElementById('modalTitle').textContent = 'Registrar Nueva Ave';
       document.getElementById('btnSubmitText').textContent = 'Guardar Ave';
       document.getElementById('inputPlacaHelp').textContent = 'Identificador único irrepetible.';
+      
+      populateModalCorralSelect('');
       
       // Sugerir fecha de hoy
       document.getElementById('inputFechaMarcaje').value = new Date().toISOString().split('T')[0];
@@ -712,6 +1253,10 @@
     }
 
     function startEdit(placa) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
       const ave = avesData.find(a => a.placa === placa);
       if (!ave) return;
 
@@ -722,7 +1267,8 @@
       document.getElementById('inputFechaNacimiento').value = ave.fecha_nacimiento || '';
       document.getElementById('inputResponsable').value = ave.responsable || '';
       document.getElementById('inputComuna').value = ave.comuna || '';
-      document.getElementById('inputCorral').value = ave.corral || '';
+      
+      populateModalCorralSelect(ave.corral || '');
 
       document.getElementById('modalTitle').textContent = 'Editar Registro';
       document.getElementById('btnSubmitText').textContent = 'Actualizar Ave';
@@ -735,6 +1281,10 @@
 
     async function handleFormSubmit(event) {
       event.preventDefault();
+      if (!isAdmin()) {
+        showModalAlert('Debes iniciar sesión como administrador para realizar cambios.', 'error');
+        return;
+      }
       if (!supabaseClient) {
         showModalAlert('No hay conexión con Supabase. Revisa las credenciales.', 'error');
         return;
@@ -796,6 +1346,10 @@
     }
 
     async function deleteAve(placa) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
       if (!confirm(`¿Confirmas que deseas eliminar el ave con placa "${placa}"?`)) {
         return;
       }
@@ -822,7 +1376,7 @@
       
       alertBox.innerHTML = `
         <i data-lucide="${type === 'error' ? 'alert-octagon' : 'check-circle'}" class="w-5 h-5 shrink-0 mt-0.5"></i>
-        <span>${escapeHtml(msg)}</span>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
       `;
       lucide.createIcons();
     }
