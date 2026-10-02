@@ -86,7 +86,7 @@
     </div>
 
     <!-- Navegación de Pestañas (Tabs) -->
-    <div class="max-w-6xl mx-auto px-4 mt-2 border-t border-slate-800/80 pt-2 flex items-center gap-2">
+    <div class="max-w-6xl mx-auto px-4 mt-2 border-t border-slate-800/80 pt-2 flex items-center gap-2 flex-wrap">
       <button
         id="tabBtnRegistro"
         onclick="switchTab('registro')"
@@ -104,6 +104,25 @@
         <i data-lucide="scale" class="w-4 h-4 text-amber-400"></i>
         <span>Módulo de Baloteo</span>
         <span id="baloteoBadgeCount" class="hidden px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">0</span>
+      </button>
+
+      <button
+        id="tabBtnCalendario"
+        onclick="switchTab('calendario')"
+        class="touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
+      >
+        <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i>
+        <span>Calendario</span>
+        <span id="calendarioBadgeCount" class="hidden px-1.5 py-0.5 rounded-full text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">0</span>
+      </button>
+
+      <button
+        id="tabBtnInformacion"
+        onclick="switchTab('informacion')"
+        class="touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
+      >
+        <i data-lucide="info" class="w-4 h-4 text-purple-400"></i>
+        <span>Información</span>
       </button>
     </div>
   </header>
@@ -515,6 +534,223 @@
       </section>
 
     </div> <!-- FIN TAB BALOTEO -->
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 3: CALENDARIO                      -->
+    <!-- ========================================== -->
+    <div id="tabContentCalendario" class="hidden space-y-6">
+
+      <!-- Panel Administrador: Crear Evento (Solo visible para Admin) -->
+      <section id="calendarioAdminPanel" class="hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex items-center gap-2 text-cyan-400 font-semibold text-base sm:text-lg pb-2 border-b border-slate-800">
+          <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+          <h2>Crear Nuevo Evento (Administrador)</h2>
+        </div>
+
+        <form id="eventoForm" onsubmit="handleCalendarioEventoSubmit(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Nombre del Evento <span class="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                id="eventoInputNombre"
+                required
+                placeholder="Ej: Gran Torneo Nacional de Otoño"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Descripción / Detalles
+              </label>
+              <textarea
+                id="eventoInputDescripcion"
+                rows="2"
+                placeholder="Detalles del evento, reglas, lugar, etc."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Fecha y Hora Inicio <span class="text-rose-400">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                id="eventoInputFechaInicio"
+                required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Fecha y Hora Fin <span class="text-rose-400">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                id="eventoInputFechaFin"
+                required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button
+              type="submit"
+              id="btnSubmitEvento"
+              class="touch-btn px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-lg shadow-cyan-950/50"
+            >
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span id="btnSubmitEventoText">Guardar Evento</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Lista de Eventos -->
+      <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2 text-cyan-400 font-semibold text-base sm:text-lg">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <h2>Próximos Eventos y Torneos</h2>
+          </div>
+          <span id="calendarioBadgeCount" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
+            0 eventos
+          </span>
+        </div>
+
+        <div id="calendarioEventosList" class="space-y-4">
+          <div class="p-6 text-center text-slate-400">
+            <p class="text-sm">Cargando eventos...</p>
+          </div>
+        </div>
+        <div id="calendarioEventosContainer" class="hidden"></div>
+      </section>
+    </div> <!-- FIN TAB CALENDARIO -->
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 4: INFORMACIÓN                     -->
+    <!-- ========================================== -->
+    <div id="tabContentInformacion" class="hidden space-y-6">
+
+      <!-- Panel Administrador: Publicar Información (Solo visible para Admin) -->
+      <section id="informacionAdminPanel" class="hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex items-center gap-2 text-purple-400 font-semibold text-base sm:text-lg pb-2 border-b border-slate-800">
+          <i data-lucide="file-plus" class="w-5 h-5"></i>
+          <h2>Publicar Información o Aviso (Administrador)</h2>
+        </div>
+
+        <form id="informacionForm" onsubmit="handleInformacionContenidoSubmit(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Tipo <span class="text-rose-400">*</span>
+              </label>
+              <select
+                id="infoInputTipo"
+                required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+              >
+                <option value="reglas">Reglas y Normativas</option>
+                <option value="aviso">Aviso Importante</option>
+                <option value="resultado">Resultado / Comunicado</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Título <span class="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                id="infoInputTitulo"
+                required
+                placeholder="Ej: Reglamento Oficial Temporada 2026"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+              />
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Contenido <span class="text-rose-400">*</span>
+              </label>
+              <textarea
+                id="infoInputContenido"
+                rows="4"
+                required
+                placeholder="Escribe el texto detallado del comunicado, reglamento o aviso..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button
+              type="submit"
+              id="btnSubmitInformacion"
+              class="touch-btn px-5 py-2.5 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-lg shadow-purple-950/50"
+            >
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span id="btnSubmitInformacionText">Publicar Información</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Lista de Contenido -->
+      <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2 text-purple-400 font-semibold text-base sm:text-lg">
+            <i data-lucide="info" class="w-5 h-5"></i>
+            <h2>Información General y Avisos</h2>
+          </div>
+
+          <!-- Filtros de categoría de información -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              id="filterInfoAll"
+              onclick="setInfoFilter('all')"
+              class="touch-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 text-white transition"
+            >
+              Todos
+            </button>
+            <button
+              id="filterInfoReglas"
+              onclick="setInfoFilter('reglas')"
+              class="touch-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            >
+              Reglas
+            </button>
+            <button
+              id="filterInfoAviso"
+              onclick="setInfoFilter('aviso')"
+              class="touch-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            >
+              Avisos
+            </button>
+            <button
+              id="filterInfoResultado"
+              onclick="setInfoFilter('resultado')"
+              class="touch-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            >
+              Resultados
+            </button>
+          </div>
+        </div>
+
+        <div id="informacionContenidoList" class="space-y-4">
+          <div class="p-6 text-center text-slate-400">
+            <p class="text-sm">Cargando información...</p>
+          </div>
+        </div>
+        <div id="informacionCardsContainer" class="hidden"></div>
+      </section>
+    </div> <!-- FIN TAB INFORMACIÓN -->
 
   </main>
 
@@ -1060,6 +1296,246 @@
         </div>
       </form>
     </div>
+  <!-- ========================================== -->
+  <!-- MODAL DE CREAR / EDITAR EVENTO            -->
+  <!-- ========================================== -->
+  <div id="eventoModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="calendar" class="w-6 h-6 text-cyan-400"></i>
+          <h3 id="eventoModalTitle" class="text-lg sm:text-xl font-bold text-white">Crear Nuevo Evento</h3>
+        </div>
+        <button onclick="closeEventoModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="eventoModalAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <form id="eventoForm" onsubmit="handleCalendarioEventoSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Nombre del Evento <span class="text-rose-400">*</span>
+          </label>
+          <input
+            type="text"
+            id="eventoInputNombre"
+            required
+            placeholder="Ej: Gran Torneo Nacional de Otoño"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Descripción y Detalles
+          </label>
+          <textarea
+            id="eventoInputDescripcion"
+            rows="3"
+            placeholder="Detalles del evento, lugar, premios, requisitos especiales..."
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Fecha y Hora Inicio <span class="text-rose-400">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              id="eventoInputFechaInicio"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Fecha y Hora Fin <span class="text-rose-400">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              id="eventoInputFechaFin"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+            />
+          </div>
+        </div>
+
+        <div class="pt-3 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeEventoModal()"
+            class="touch-btn w-full sm:w-1/3 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnSubmitEvento"
+            class="touch-btn w-full sm:w-2/3 py-3.5 px-4 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-cyan-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span id="btnSubmitEventoText">Guardar Evento</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE INSCRIBIR CORRAL A EVENTO         -->
+  <!-- ========================================== -->
+  <div id="inscribirModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-6 h-6 text-cyan-400"></i>
+          <h3 class="text-lg sm:text-xl font-bold text-white">Inscribir Corral</h3>
+        </div>
+        <button onclick="closeInscribirModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="inscribirModalAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Evento Seleccionado</span>
+        <h4 id="inscribirEventoNombre" class="text-sm font-bold text-cyan-300"></h4>
+        <p id="inscribirEventoFecha" class="text-xs text-slate-400"></p>
+      </div>
+
+      <form id="inscribirForm" onsubmit="handleInscribirSubmit(event)" class="space-y-4">
+        <input type="hidden" id="inscribirEventoId" />
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Seleccionar Corral Registrado <span class="text-rose-400">*</span>
+          </label>
+          <select
+            id="inscribirSelectCorral"
+            required
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+          >
+            <!-- Opciones cargadas dinámicamente -->
+          </select>
+          <p class="text-[11px] text-slate-400 mt-1">El corral debe estar registrado en el sistema.</p>
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeInscribirModal()"
+            class="touch-btn w-full sm:w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnSubmitInscribir"
+            class="touch-btn w-full sm:w-2/3 py-3 px-4 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-cyan-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Confirmar Inscripción</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE PUBLICAR / EDITAR INFORMACIÓN     -->
+  <!-- ========================================== -->
+  <div id="informacionModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="info" class="w-6 h-6 text-purple-400"></i>
+          <h3 id="informacionModalTitle" class="text-lg sm:text-xl font-bold text-white">Publicar Información</h3>
+        </div>
+        <button onclick="closeInformacionModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="informacionModalAlert" class="hidden p-3.5 rounded-xl text-sm flex items-start gap-2.5"></div>
+
+      <form id="informacionForm" onsubmit="handleInformacionContenidoSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Tipo de Publicación <span class="text-rose-400">*</span>
+          </label>
+          <select
+            id="infoInputTipo"
+            required
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+          >
+            <option value="reglas">Reglas y Normativas</option>
+            <option value="aviso">Aviso Importante</option>
+            <option value="resultado">Resultado / Comunicado</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Título <span class="text-rose-400">*</span>
+          </label>
+          <input
+            type="text"
+            id="infoInputTitulo"
+            required
+            placeholder="Ej: Reglamento Oficial Temporada 2026"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Contenido <span class="text-rose-400">*</span>
+          </label>
+          <textarea
+            id="infoInputContenido"
+            rows="6"
+            required
+            placeholder="Escribe el texto detallado del comunicado, reglamento o aviso..."
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input
+            type="checkbox"
+            id="infoInputActivo"
+            checked
+            class="w-4 h-4 rounded text-purple-600 bg-slate-950 border-slate-700 focus:ring-purple-500"
+          />
+          <label for="infoInputActivo" class="text-xs text-slate-300 font-medium cursor-pointer">
+            Publicación visible y activa en el portal
+          </label>
+        </div>
+
+        <div class="pt-3 flex flex-col sm:flex-row gap-2.5">
+          <button
+            type="button"
+            onclick="closeInformacionModal()"
+            class="touch-btn w-full sm:w-1/3 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btnSubmitInformacion"
+            class="touch-btn w-full sm:w-2/3 py-3.5 px-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-950/60 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span id="btnSubmitInformacionText">Guardar Publicación</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- ========================================== -->
@@ -1077,6 +1553,10 @@
     let supabaseClient = null;
     let realtimeAvesChannel = null;
     let realtimeCorralesChannel = null;
+    let realtimeCalendarioChannel = null;
+    let realtimeInscripcionesChannel = null;
+    let realtimeInformacionChannel = null;
+
     let avesData = [];             // Fuente de verdad de aves
     let corralesData = [];         // Fuente de verdad de corrales
     let baloteoAves = [];          // Fuente de datos de aves ingresadas a Baloteo
@@ -1084,12 +1564,30 @@
     let avesSinPactar = [];        // Lista de aves sin pactar
     let editingPlaca = null;       // Modo edición si contiene la placa
     let currentUser = null;        // Usuario autenticado (administrador)
+
+    // Variables de Estado de Calendario e Información
+    let calendarioEventosData = [];
+    let informacionContenidoData = [];
+    let inscripcionesData = [];    // Lista de inscripciones (calendario_inscripciones)
+    let editingEventoId = null;    // ID del evento en edición
+    let editingInformacionId = null;// ID de la publicación en edición
+    let activeInfoFilter = 'all';  // Filtro activo en Información ('all', 'reglas', 'aviso', 'resultado')
+
+    // Alias para compatibilidad total
+    let eventosData = calendarioEventosData;
+    let informacionData = informacionContenidoData;
     
     // Variables de Estado de Cámara y Foto
     let currentCameraStream = null;  // Stream en vivo de MediaStream
     let selectedPhotoBlob = null;    // Blob final listo para subir a Supabase
     let capturedTempBlob = null;     // Blob temporal en la vista previa del modal de cámara
     let currentAvePhotoUrl = null;   // URL de la foto existente en edición
+
+    // Funciones globales de autenticación disponibles inmediatamente
+    function isAdmin() {
+      return !!currentUser;
+    }
+    window.isAdmin = isAdmin;
 
     // Inicialización al cargar el DOM
     document.addEventListener('DOMContentLoaded', () => {
@@ -1123,12 +1621,19 @@
           }
         });
 
-        // 3. Cargar corrales y aves iniciales desde Supabase (Lectura pública)
+        // 3. Cargar datos iniciales desde Supabase (Lectura pública)
         await fetchCorralesFromSupabase();
         await fetchAvesFromSupabase();
+        await fetchCalendarioInscripciones();
 
-        // 4. Suscribir a cambios en tiempo real en aves y corrales
+        // 4. Suscribir a cambios en tiempo real
         setupRealtimeSubscriptions();
+
+        // Inicializar módulos nuevos
+        await initCalendarioRealtime();
+        await initInformacionRealtime();
+        updateCalendarioAdminPanel();
+        updateInformacionAdminPanel();
 
         // 5. Listener para el Verificador de Placas (Buscador instantáneo)
         document.getElementById('verifierInput').addEventListener('input', (e) => {
@@ -1170,6 +1675,8 @@
       const btnLogout = document.getElementById('btnLogout');
       const btnOpenCrearPactoManual = document.getElementById('btnOpenCrearPactoManual');
       const pesajeFormContainer = document.getElementById('baloteoPesajeFormContainer');
+      const btnOpenAddEvento = document.getElementById('btnOpenAddEvento');
+      const btnOpenAddInformacion = document.getElementById('btnOpenAddInformacion');
 
       if (isAdmin()) {
         if (btnOpenLogin) btnOpenLogin.classList.add('hidden');
@@ -1178,6 +1685,8 @@
         if (btnLogout) btnLogout.classList.remove('hidden');
         if (btnOpenCrearPactoManual) btnOpenCrearPactoManual.classList.remove('hidden');
         if (pesajeFormContainer) pesajeFormContainer.classList.remove('hidden');
+        if (btnOpenAddEvento) btnOpenAddEvento.classList.remove('hidden');
+        if (btnOpenAddInformacion) btnOpenAddInformacion.classList.remove('hidden');
       } else {
         if (btnOpenLogin) btnOpenLogin.classList.remove('hidden');
         if (btnOpenCorrales) btnOpenCorrales.classList.add('hidden');
@@ -1185,8 +1694,39 @@
         if (btnLogout) btnLogout.classList.add('hidden');
         if (btnOpenCrearPactoManual) btnOpenCrearPactoManual.classList.add('hidden');
         if (pesajeFormContainer) pesajeFormContainer.classList.add('hidden');
+        if (btnOpenAddEvento) btnOpenAddEvento.classList.add('hidden');
+        if (btnOpenAddInformacion) btnOpenAddInformacion.classList.add('hidden');
       }
+      
+      updateCalendarioAdminPanel();
+      updateInformacionAdminPanel();
       lucide.createIcons();
+    }
+
+    function updateCalendarioAdminPanel() {
+      const adminPanel = document.getElementById('calendarioAdminPanel');
+      const btnAddEvento = document.getElementById('btnOpenAddEvento');
+
+      if (isAdmin()) {
+        if (adminPanel) adminPanel.classList.remove('hidden');
+        if (btnAddEvento) btnAddEvento.classList.remove('hidden');
+      } else {
+        if (adminPanel) adminPanel.classList.add('hidden');
+        if (btnAddEvento) btnAddEvento.classList.add('hidden');
+      }
+    }
+
+    function updateInformacionAdminPanel() {
+      const adminPanel = document.getElementById('informacionAdminPanel');
+      const btnAddInfo = document.getElementById('btnOpenAddInformacion');
+
+      if (isAdmin()) {
+        if (adminPanel) adminPanel.classList.remove('hidden');
+        if (btnAddInfo) btnAddInfo.classList.remove('hidden');
+      } else {
+        if (adminPanel) adminPanel.classList.add('hidden');
+        if (btnAddInfo) btnAddInfo.classList.add('hidden');
+      }
     }
 
     function openLoginModal() {
@@ -1566,6 +2106,15 @@
       if (realtimeCorralesChannel) {
         supabaseClient.removeChannel(realtimeCorralesChannel);
       }
+      if (realtimeCalendarioChannel) {
+        supabaseClient.removeChannel(realtimeCalendarioChannel);
+      }
+      if (realtimeInscripcionesChannel) {
+        supabaseClient.removeChannel(realtimeInscripcionesChannel);
+      }
+      if (realtimeInformacionChannel) {
+        supabaseClient.removeChannel(realtimeInformacionChannel);
+      }
 
       // Realtime Aves
       realtimeAvesChannel = supabaseClient
@@ -1593,6 +2142,42 @@
           { event: '*', schema: 'public', table: 'corrales' },
           (payload) => {
             handleRealtimeCorralEvent(payload);
+          }
+        )
+        .subscribe();
+
+      // Realtime Calendario Eventos
+      realtimeCalendarioChannel = supabaseClient
+        .channel('public:calendario_eventos:cambios')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'calendario_eventos' },
+          (payload) => {
+            handleRealtimeEventoEvent(payload);
+          }
+        )
+        .subscribe();
+
+      // Realtime Calendario Inscripciones
+      realtimeInscripcionesChannel = supabaseClient
+        .channel('public:calendario_inscripciones:cambios')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'calendario_inscripciones' },
+          (payload) => {
+            handleRealtimeInscripcionEvent(payload);
+          }
+        )
+        .subscribe();
+
+      // Realtime Información Contenido
+      realtimeInformacionChannel = supabaseClient
+        .channel('public:informacion_contenido:cambios')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'informacion_contenido' },
+          (payload) => {
+            handleRealtimeInformacionEvent(payload);
           }
         )
         .subscribe();
@@ -1645,6 +2230,71 @@
       renderCorralesList();
     }
 
+    function handleRealtimeEventoEvent(payload) {
+      const { eventType, new: newRow, old: oldRow } = payload;
+
+      if (eventType === 'INSERT') {
+        if (!eventosData.some(e => e.id === newRow.id)) {
+          eventosData.push(newRow);
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = eventosData.findIndex(e => e.id === newRow.id);
+        if (idx !== -1) {
+          eventosData[idx] = newRow;
+        } else {
+          eventosData.push(newRow);
+        }
+      } else if (eventType === 'DELETE') {
+        eventosData = eventosData.filter(e => e.id !== oldRow.id);
+      }
+
+      eventosData.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+      renderCalendario();
+    }
+
+    function handleRealtimeInscripcionEvent(payload) {
+      const { eventType, new: newRow, old: oldRow } = payload;
+
+      if (eventType === 'INSERT') {
+        if (!inscripcionesData.some(i => i.id === newRow.id)) {
+          inscripcionesData.push(newRow);
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = inscripcionesData.findIndex(i => i.id === newRow.id);
+        if (idx !== -1) {
+          inscripcionesData[idx] = newRow;
+        } else {
+          inscripcionesData.push(newRow);
+        }
+      } else if (eventType === 'DELETE') {
+        inscripcionesData = inscripcionesData.filter(i => i.id !== oldRow.id);
+      }
+
+      renderCalendario();
+    }
+
+    function handleRealtimeInformacionEvent(payload) {
+      const { eventType, new: newRow, old: oldRow } = payload;
+
+      if (eventType === 'INSERT') {
+        if (!informacionData.some(inf => inf.id === newRow.id)) {
+          informacionData.unshift(newRow);
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = informacionData.findIndex(inf => inf.id === newRow.id);
+        if (idx !== -1) {
+          informacionData[idx] = newRow;
+        } else {
+          informacionData.unshift(newRow);
+        }
+      } else if (eventType === 'DELETE') {
+        informacionData = informacionData.filter(inf => inf.id !== oldRow.id);
+      }
+
+      informacionData.sort((a, b) => new Date(b.fecha_actualizacion || b.fecha_creacion || 0) - new Date(a.fecha_actualizacion || a.fecha_creacion || 0));
+      renderInformacion();
+    }
+
     async function fetchAvesFromSupabase() {
       if (!supabaseClient) return;
       try {
@@ -1679,6 +2329,110 @@
       }
     }
 
+    async function initCalendarioRealtime() {
+      if (!supabaseClient) return;
+      await fetchCalendarioEventos();
+
+      if (realtimeCalendarioChannel) {
+        supabaseClient.removeChannel(realtimeCalendarioChannel);
+      }
+
+      realtimeCalendarioChannel = supabaseClient
+        .channel('public:calendario_eventos:realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'calendario_eventos' },
+          () => {
+            fetchCalendarioEventos();
+          }
+        )
+        .subscribe();
+    }
+
+    async function fetchCalendarioEventos() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('calendario_eventos')
+          .select('*')
+          .order('fecha_inicio', { ascending: true });
+
+        if (!error && data) {
+          calendarioEventosData = data;
+          eventosData = data;
+          renderCalendarioEventos();
+        } else if (error) {
+          console.warn("Aviso al cargar calendario_eventos:", error.message);
+        }
+      } catch (err) {
+        console.warn("Error al cargar calendario_eventos:", err);
+      }
+    }
+
+    async function fetchCalendarioInscripciones() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('calendario_inscripciones')
+          .select('*');
+
+        if (!error && data) {
+          inscripcionesData = data;
+          renderCalendario();
+        } else if (error) {
+          console.warn("Aviso al cargar calendario_inscripciones:", error.message);
+        }
+      } catch (err) {
+        console.warn("Error al cargar calendario_inscripciones:", err);
+      }
+    }
+
+    async function initInformacionRealtime() {
+      if (!supabaseClient) return;
+      await fetchInformacionContenido();
+
+      if (realtimeInformacionChannel) {
+        supabaseClient.removeChannel(realtimeInformacionChannel);
+      }
+
+      realtimeInformacionChannel = supabaseClient
+        .channel('public:informacion_contenido:realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'informacion_contenido' },
+          () => {
+            fetchInformacionContenido();
+          }
+        )
+        .subscribe();
+    }
+
+    async function fetchInformacionContenido() {
+      if (!supabaseClient) return;
+      try {
+        let query = supabaseClient
+          .from('informacion_contenido')
+          .select('*')
+          .order('fecha_creacion', { ascending: false });
+
+        if (!isAdmin()) {
+          query = query.eq('activo', true);
+        }
+
+        const { data, error } = await query;
+
+        if (!error && data) {
+          informacionContenidoData = data;
+          informacionData = data;
+          renderInformacionContenido();
+        } else if (error) {
+          console.warn("Aviso al cargar informacion_contenido:", error.message);
+        }
+      } catch (err) {
+        console.warn("Error al cargar informacion_contenido:", err);
+      }
+    }
+
     function updateStatusBadge(isOnline, text) {
       const badge = document.getElementById('realtimeBadge');
       if (isOnline) {
@@ -1710,6 +2464,8 @@
       populateFilterOptions();
       renderAvesList();
       populateBaloteoPlacasDatalist();
+      renderCalendario();
+      renderInformacion();
     }
 
     // =========================================================================
@@ -2442,26 +3198,42 @@
     // MÓDULO DE BALOTEO: NAVEGACIÓN, PESAJE Y PACTADO AUTOMÁTICO
     // =========================================================================
     
-    // Cambio entre Pestaña de Registro y Pestaña de Baloteo
+    // Cambio entre Pestañas: Registro, Baloteo, Calendario e Información
     function switchTab(tabName) {
-      const btnRegistro = document.getElementById('tabBtnRegistro');
-      const btnBaloteo = document.getElementById('tabBtnBaloteo');
-      const contentRegistro = document.getElementById('tabContentRegistro');
-      const contentBaloteo = document.getElementById('tabContentBaloteo');
+      const tabs = [
+        { name: 'registro', color: 'bg-emerald-600 shadow-emerald-950/50' },
+        { name: 'baloteo', color: 'bg-amber-600 shadow-amber-950/50' },
+        { name: 'calendario', color: 'bg-cyan-600 shadow-cyan-950/50' },
+        { name: 'informacion', color: 'bg-purple-600 shadow-purple-950/50' }
+      ];
 
-      if (tabName === 'registro') {
-        btnRegistro.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md shadow-emerald-950/50";
-        btnBaloteo.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60";
-        contentRegistro.classList.remove('hidden');
-        contentBaloteo.classList.add('hidden');
-      } else if (tabName === 'baloteo') {
-        btnBaloteo.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-amber-600 text-white shadow-md shadow-amber-950/50";
-        btnRegistro.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60";
-        contentBaloteo.classList.remove('hidden');
-        contentRegistro.classList.add('hidden');
+      tabs.forEach(t => {
+        const capitalized = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+        const btn = document.getElementById(`tabBtn${capitalized}`);
+        const content = document.getElementById(`tabContent${capitalized}`);
+
+        if (t.name === tabName) {
+          if (content) content.classList.remove('hidden');
+          if (btn) {
+            btn.className = `touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 ${t.color} text-white shadow-md`;
+          }
+        } else {
+          if (content) content.classList.add('hidden');
+          if (btn) {
+            btn.className = "touch-btn px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60";
+          }
+        }
+      });
+
+      if (tabName === 'baloteo') {
         populateBaloteoPlacasDatalist();
         renderBaloteoPesadas();
+      } else if (tabName === 'calendario') {
+        renderCalendario();
+      } else if (tabName === 'informacion') {
+        renderInformacion();
       }
+
       lucide.createIcons();
     }
 
@@ -3885,6 +4657,772 @@
         'Ranking Oficial de Corrales',
         `Adjunto la tabla oficial de posiciones y ranking de corrales (${fechaHoy}).`
       );
+    }
+
+    // =========================================================================
+    // PESTAÑA 3: GESTIÓN DE CALENDARIO Y TORNEOS (calendario_eventos, calendario_inscripciones)
+    // =========================================================================
+
+    function renderCalendario() {
+      renderCalendarioEventos();
+    }
+
+    function renderCalendarioEventos() {
+      const container = document.getElementById('calendarioEventosList') || document.getElementById('calendarioEventosContainer');
+      const badgeCount = document.getElementById('calendarioBadgeCount');
+
+      const dataList = calendarioEventosData || eventosData || [];
+
+      if (badgeCount) {
+        if (dataList.length > 0) {
+          badgeCount.textContent = dataList.length;
+          badgeCount.classList.remove('hidden');
+        } else {
+          badgeCount.classList.add('hidden');
+        }
+      }
+
+      if (!container) return;
+
+      if (dataList.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-slate-950/60 rounded-2xl border border-slate-800 text-slate-400 space-y-2">
+            <i data-lucide="calendar" class="w-8 h-8 mx-auto text-cyan-400"></i>
+            <h3 class="text-sm sm:text-base font-semibold text-white">No hay eventos programados</h3>
+            <p class="text-xs text-slate-500">Pronto se anunciarán las próximas fechas de baloteos y torneos oficiales.</p>
+            ${isAdmin() ? `
+              <div class="pt-2">
+                <button onclick="openEventoModal()" class="touch-btn px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl text-xs transition inline-flex items-center gap-1.5">
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> Crear Primer Evento
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const now = new Date();
+
+      container.innerHTML = dataList.map(evento => {
+        const start = new Date(evento.fecha_inicio);
+        const end = new Date(evento.fecha_fin);
+
+        let statusHtml = '';
+        if (now < start) {
+          statusHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Próximo</span>`;
+        } else if (now >= start && now <= end) {
+          statusHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> En Curso</span>`;
+        } else {
+          statusHtml = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Finalizado</span>`;
+        }
+
+        // Obtener inscripciones de este evento
+        const eventoInscripciones = inscripcionesData.filter(i => String(i.evento_id) === String(evento.id));
+
+        return `
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-lg hover:border-slate-700 transition">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-800/80">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base sm:text-lg font-bold text-white">${escapeHtml(evento.nombre)}</h3>
+                  ${statusHtml}
+                </div>
+                <div class="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    ${formatDateRange(evento.fecha_inicio, evento.fecha_fin)}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Acciones de Cabecera (Inscribir / Editar / Eliminar) -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <button
+                  onclick="openInscribirModal('${escapeHtml(evento.id)}')"
+                  class="touch-btn px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-semibold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                  <span>Inscribir Corral</span>
+                </button>
+
+                ${isAdmin() ? `
+                  <button
+                    onclick="startEditEvento('${escapeHtml(evento.id)}')"
+                    class="touch-btn p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition"
+                    title="Editar Evento"
+                  >
+                    <i data-lucide="edit-3" class="w-4 h-4 text-cyan-400"></i>
+                  </button>
+                  <button
+                    onclick="deleteEvento('${escapeHtml(evento.id)}')"
+                    class="touch-btn p-2 bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 rounded-xl transition border border-rose-800/50"
+                    title="Eliminar Evento"
+                  >
+                    <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            ${evento.descripcion ? `
+              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-3 rounded-xl border border-slate-800/60">
+                ${escapeHtml(evento.descripcion)}
+              </p>
+            ` : ''}
+
+            <!-- Corrales Inscritos -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i> Corrales Inscritos (${eventoInscripciones.length})
+                </span>
+              </div>
+
+              ${eventoInscripciones.length === 0 ? `
+                <p class="text-xs text-slate-500 italic">Aún no hay corrales inscritos en este evento.</p>
+              ` : `
+                <div class="flex flex-wrap gap-2 pt-1">
+                  ${eventoInscripciones.map(ins => {
+                    const corral = corralesData.find(c => String(c.id) === String(ins.corral_id));
+                    const corralNombre = corral ? corral.nombre : `Corral #${ins.corral_id}`;
+                    return `
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 shadow-sm">
+                        <i data-lucide="shield" class="w-3 h-3 text-cyan-400"></i>
+                        <span>${escapeHtml(corralNombre)}</span>
+                        ${isAdmin() ? `
+                          <button
+                            onclick="deleteInscripcion('${escapeHtml(ins.id)}')"
+                            class="ml-1 text-slate-500 hover:text-rose-400 transition"
+                            title="Quitar inscripción"
+                          >
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                          </button>
+                        ` : ''}
+                      </span>
+                    `;
+                  }).join('')}
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function formatDateRange(isoStart, isoEnd) {
+      try {
+        const d1 = new Date(isoStart);
+        const d2 = new Date(isoEnd);
+
+        const optionsDate = { day: '2-digit', month: 'short', year: 'numeric' };
+        const optionsTime = { hour: '2-digit', minute: '2-digit' };
+
+        const str1Date = d1.toLocaleDateString('es-CL', optionsDate);
+        const str1Time = d1.toLocaleTimeString('es-CL', optionsTime);
+        const str2Date = d2.toLocaleDateString('es-CL', optionsDate);
+        const str2Time = d2.toLocaleTimeString('es-CL', optionsTime);
+
+        if (str1Date === str2Date) {
+          return `${str1Date} | ${str1Time} a ${str2Time}`;
+        }
+        return `${str1Date} ${str1Time} - ${str2Date} ${str2Time}`;
+      } catch (e) {
+        return `${isoStart} - ${isoEnd}`;
+      }
+    }
+
+    function openEventoModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      editingEventoId = null;
+      document.getElementById('eventoForm').reset();
+      document.getElementById('eventoModalTitle').textContent = 'Crear Nuevo Evento';
+      document.getElementById('btnSubmitEventoText').textContent = 'Guardar Evento';
+      
+      // Fechas por defecto sugeridas
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const nowStr = now.toISOString().slice(0, 16);
+      document.getElementById('eventoInputFechaInicio').value = nowStr;
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+      document.getElementById('eventoInputFechaFin').value = tomorrow.toISOString().slice(0, 16);
+
+      hideEventoModalAlert();
+      document.getElementById('eventoModal').classList.remove('hidden');
+      document.getElementById('eventoInputNombre').focus();
+      lucide.createIcons();
+    }
+
+    function closeEventoModal() {
+      document.getElementById('eventoModal').classList.add('hidden');
+      editingEventoId = null;
+    }
+
+    function startEditEvento(id) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      const ev = eventosData.find(e => String(e.id) === String(id));
+      if (!ev) return;
+
+      editingEventoId = ev.id;
+      document.getElementById('eventoInputNombre').value = ev.nombre || '';
+      document.getElementById('eventoInputDescripcion').value = ev.descripcion || '';
+      
+      if (ev.fecha_inicio) {
+        const d1 = new Date(ev.fecha_inicio);
+        d1.setMinutes(d1.getMinutes() - d1.getTimezoneOffset());
+        document.getElementById('eventoInputFechaInicio').value = d1.toISOString().slice(0, 16);
+      }
+      if (ev.fecha_fin) {
+        const d2 = new Date(ev.fecha_fin);
+        d2.setMinutes(d2.getMinutes() - d2.getTimezoneOffset());
+        document.getElementById('eventoInputFechaFin').value = d2.toISOString().slice(0, 16);
+      }
+
+      document.getElementById('eventoModalTitle').textContent = 'Editar Evento';
+      document.getElementById('btnSubmitEventoText').textContent = 'Actualizar Evento';
+      hideEventoModalAlert();
+      document.getElementById('eventoModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function handleCalendarioEventoSubmit(event) {
+      event.preventDefault();
+      if (!isAdmin()) {
+        showEventoModalAlert('Debes ser administrador para crear o editar eventos.');
+        return;
+      }
+      if (!supabaseClient) {
+        showEventoModalAlert('No hay conexión con Supabase.');
+        return;
+      }
+
+      const nombre = document.getElementById('eventoInputNombre').value.trim();
+      const descripcion = document.getElementById('eventoInputDescripcion').value.trim() || null;
+      const fechaInicioVal = document.getElementById('eventoInputFechaInicio').value;
+      const fechaFinVal = document.getElementById('eventoInputFechaFin').value;
+
+      if (!nombre || !fechaInicioVal || !fechaFinVal) {
+        showEventoModalAlert('El nombre y las fechas son obligatorios.');
+        return;
+      }
+
+      const fecha_inicio = new Date(fechaInicioVal).toISOString();
+      const fecha_fin = new Date(fechaFinVal).toISOString();
+
+      if (new Date(fecha_fin) < new Date(fecha_inicio)) {
+        showEventoModalAlert('La fecha de fin no puede ser anterior a la de inicio.');
+        return;
+      }
+
+      const btnSubmit = document.getElementById('btnSubmitEvento');
+      btnSubmit.disabled = true;
+      document.getElementById('btnSubmitEventoText').textContent = 'Guardando...';
+
+      try {
+        const payload = {
+          nombre,
+          descripcion,
+          fecha_inicio,
+          fecha_fin
+        };
+
+        if (editingEventoId) {
+          const { error } = await supabaseClient
+            .from('calendario_eventos')
+            .update(payload)
+            .eq('id', editingEventoId);
+
+          if (error) throw error;
+        } else {
+          payload.created_by = currentUser ? (currentUser.email || currentUser.id) : null;
+          payload.creado_en = new Date().toISOString();
+
+          const { error } = await supabaseClient
+            .from('calendario_eventos')
+            .insert([payload]);
+
+          if (error) throw error;
+        }
+
+        document.getElementById('eventoForm').reset();
+        closeEventoModal();
+        await fetchCalendarioEventos();
+      } catch (err) {
+        console.error('Error guardando evento:', err);
+        showEventoModalAlert(err.message || 'Error al guardar el evento.');
+      } finally {
+        btnSubmit.disabled = false;
+        document.getElementById('btnSubmitEventoText').textContent = editingEventoId ? 'Actualizar Evento' : 'Guardar Evento';
+      }
+    }
+
+    const handleEventoSubmit = handleCalendarioEventoSubmit;
+
+    async function deleteCalendarioEvento(id) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      if (!confirm('¿Eliminar este evento?')) {
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('calendario_eventos')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        await fetchCalendarioEventos();
+      } catch (err) {
+        console.error('Error al eliminar evento:', err);
+        alert('Error al eliminar evento: ' + (err.message || err));
+      }
+    }
+
+    const deleteEvento = deleteCalendarioEvento;
+
+    function showEventoModalAlert(msg) {
+      const alertBox = document.getElementById('eventoModalAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200';
+      alertBox.innerHTML = `
+        <i data-lucide="alert-octagon" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideEventoModalAlert() {
+      const alertBox = document.getElementById('eventoModalAlert');
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML = '';
+    }
+
+    // INSCRIPCIONES
+    function openInscribirModal(eventoId) {
+      const evento = eventosData.find(e => String(e.id) === String(eventoId));
+      if (!evento) return;
+
+      document.getElementById('inscribirEventoId').value = evento.id;
+      document.getElementById('inscribirEventoNombre').textContent = evento.nombre;
+      document.getElementById('inscribirEventoFecha').textContent = formatDateRange(evento.fecha_inicio, evento.fecha_fin);
+
+      // Poblar selector con corrales
+      const select = document.getElementById('inscribirSelectCorral');
+      const yaInscritos = inscripcionesData
+        .filter(i => String(i.evento_id) === String(evento.id))
+        .map(i => String(i.corral_id));
+
+      if (corralesData.length === 0) {
+        select.innerHTML = '<option value="">-- No hay corrales registrados --</option>';
+      } else {
+        select.innerHTML = `
+          <option value="">-- Selecciona un Corral --</option>
+          ${corralesData.map(c => {
+            const isAlready = yaInscritos.includes(String(c.id));
+            return `<option value="${escapeHtml(c.id)}" ${isAlready ? 'disabled' : ''}>
+              ${escapeHtml(c.nombre)} ${isAlready ? '(Ya inscrito)' : ''}
+            </option>`;
+          }).join('')}
+        `;
+      }
+
+      hideInscribirModalAlert();
+      document.getElementById('inscribirModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeInscribirModal() {
+      document.getElementById('inscribirModal').classList.add('hidden');
+    }
+
+    async function handleInscribirSubmit(event) {
+      event.preventDefault();
+      if (!supabaseClient) {
+        showInscribirModalAlert('No hay conexión con Supabase.');
+        return;
+      }
+
+      const evento_id = document.getElementById('inscribirEventoId').value;
+      const corral_id = document.getElementById('inscribirSelectCorral').value;
+
+      if (!evento_id || !corral_id) {
+        showInscribirModalAlert('Debes seleccionar un corral válido.');
+        return;
+      }
+
+      const btnSubmit = document.getElementById('btnSubmitInscribir');
+      btnSubmit.disabled = true;
+
+      try {
+        const payload = {
+          evento_id: evento_id,
+          corral_id: parseInt(corral_id, 10),
+          creado_en: new Date().toISOString()
+        };
+
+        const { error } = await supabaseClient
+          .from('calendario_inscripciones')
+          .insert([payload]);
+
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error('Este corral ya se encuentra inscrito en este evento.');
+          }
+          throw error;
+        }
+
+        closeInscribirModal();
+        await fetchCalendarioInscripciones();
+      } catch (err) {
+        console.error('Error al inscribir corral:', err);
+        showInscribirModalAlert(err.message || 'Error al inscribir corral.');
+      } finally {
+        btnSubmit.disabled = false;
+      }
+    }
+
+    async function deleteInscripcion(inscripcionId) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      if (!confirm('¿Confirmas que deseas cancelar esta inscripción?')) {
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('calendario_inscripciones')
+          .delete()
+          .eq('id', inscripcionId);
+
+        if (error) throw error;
+        inscripcionesData = inscripcionesData.filter(i => String(i.id) !== String(inscripcionId));
+        renderCalendario();
+      } catch (err) {
+        console.error('Error al eliminar inscripción:', err);
+        alert('Error al cancelar inscripción: ' + (err.message || err));
+      }
+    }
+
+    function showInscribirModalAlert(msg) {
+      const alertBox = document.getElementById('inscribirModalAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200';
+      alertBox.innerHTML = `
+        <i data-lucide="alert-octagon" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideInscribirModalAlert() {
+      const alertBox = document.getElementById('inscribirModalAlert');
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML = '';
+    }
+
+    // =========================================================================
+    // PESTAÑA 4: GESTIÓN DE INFORMACIÓN, REGLAS Y AVISOS (informacion_contenido)
+    // =========================================================================
+
+    function setInfoFilter(filter) {
+      activeInfoFilter = filter;
+      const filters = ['all', 'reglas', 'aviso', 'resultado'];
+
+      filters.forEach(f => {
+        const capitalized = f.charAt(0).toUpperCase() + f.slice(1);
+        const btn = document.getElementById(`filterInfo${capitalized}`);
+        if (!btn) return;
+
+        if (f === filter) {
+          btn.className = "touch-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 text-white transition";
+        } else {
+          btn.className = "touch-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+        }
+      });
+
+      renderInformacion();
+    }
+
+    function renderInformacion() {
+      renderInformacionContenido();
+    }
+
+    function renderInformacionContenido() {
+      const container = document.getElementById('informacionContenidoList') || document.getElementById('informacionCardsContainer');
+      if (!container) return;
+
+      let items = [...(informacionContenidoData || informacionData || [])];
+
+      // Si no es admin, solo mostrar publicaciones activas
+      if (!isAdmin()) {
+        items = items.filter(it => it.activo !== false);
+      }
+
+      // Aplicar filtro de categoría
+      if (activeInfoFilter !== 'all') {
+        items = items.filter(it => it.tipo === activeInfoFilter);
+      }
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-slate-950/60 rounded-2xl border border-slate-800 text-slate-400 space-y-2">
+            <i data-lucide="info" class="w-8 h-8 mx-auto text-purple-400"></i>
+            <h3 class="text-sm sm:text-base font-semibold text-white">No hay publicaciones disponibles</h3>
+            <p class="text-xs text-slate-500">No se encontraron artículos o avisos para esta categoría.</p>
+            ${isAdmin() ? `
+              <div class="pt-2">
+                <button onclick="openInformacionModal()" class="touch-btn px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs transition inline-flex items-center gap-1.5">
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> Crear Primera Publicación
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const tipoBadges = {
+        reglas: { label: 'Reglas y Normativas', color: 'bg-blue-950/90 text-blue-300 border-blue-800/80', icon: 'book-open' },
+        aviso: { label: 'Aviso Importante', color: 'bg-amber-950/90 text-amber-300 border-amber-800/80', icon: 'alert-triangle' },
+        resultado: { label: 'Resultado / Comunicado', color: 'bg-emerald-950/90 text-emerald-300 border-emerald-800/80', icon: 'award' }
+      };
+
+      container.innerHTML = items.map(item => {
+        const badge = tipoBadges[item.tipo] || { label: item.tipo, color: 'bg-slate-800 text-slate-300 border-slate-700', icon: 'info' };
+        
+        let dateLabel = '';
+        if (item.fecha_creacion || item.fecha_actualizacion) {
+          try {
+            const d = new Date(item.fecha_creacion || item.fecha_actualizacion);
+            dateLabel = d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch(e) {}
+        }
+
+        return `
+          <article class="bg-slate-950/80 border ${item.activo === false ? 'border-dashed border-rose-900/60 opacity-75' : 'border-slate-800'} rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-lg hover:border-slate-700 transition">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.color}">
+                  <i data-lucide="${badge.icon}" class="w-3.5 h-3.5"></i>
+                  ${escapeHtml(badge.label)}
+                </span>
+                ${item.activo === false ? `
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                    Desactivado
+                  </span>
+                ` : ''}
+              </div>
+
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                ${dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : ''}
+
+                ${isAdmin() ? `
+                  <div class="flex items-center gap-1 ml-2 border-l border-slate-800 pl-2">
+                    <button
+                      onclick="startEditInformacion('${escapeHtml(item.id)}')"
+                      class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-purple-400 hover:text-purple-300 transition touch-btn"
+                      title="Editar"
+                    >
+                      <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <!-- Botón X para borrar/desactivar (Solo Admin) -->
+                    <button
+                      onclick="deleteInformacionContenido('${escapeHtml(item.id)}')"
+                      class="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/60 text-rose-400 hover:text-rose-300 transition touch-btn flex items-center gap-1"
+                      title="Desactivar / Borrar publicación"
+                    >
+                      <i data-lucide="x" class="w-4 h-4 text-rose-400"></i>
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <h3 class="text-base sm:text-lg font-bold text-white tracking-tight leading-snug">
+              ${escapeHtml(item.titulo)}
+            </h3>
+
+            <div class="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/40 p-3.5 rounded-xl border border-slate-800/40">
+              ${escapeHtml(item.contenido)}
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function openInformacionModal() {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      editingInformacionId = null;
+      document.getElementById('informacionForm').reset();
+      document.getElementById('infoInputActivo').checked = true;
+      document.getElementById('informacionModalTitle').textContent = 'Publicar Información';
+      document.getElementById('btnSubmitInformacionText').textContent = 'Guardar Publicación';
+
+      hideInformacionModalAlert();
+      document.getElementById('informacionModal').classList.remove('hidden');
+      document.getElementById('infoInputTitulo').focus();
+      lucide.createIcons();
+    }
+
+    function closeInformacionModal() {
+      document.getElementById('informacionModal').classList.add('hidden');
+      editingInformacionId = null;
+    }
+
+    function startEditInformacion(id) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      const item = (informacionContenidoData || informacionData).find(inf => String(inf.id) === String(id));
+      if (!item) return;
+
+      editingInformacionId = item.id;
+      document.getElementById('infoInputTipo').value = item.tipo || 'reglas';
+      document.getElementById('infoInputTitulo').value = item.titulo || '';
+      document.getElementById('infoInputContenido').value = item.contenido || '';
+      document.getElementById('infoInputActivo').checked = item.activo !== false;
+
+      document.getElementById('informacionModalTitle').textContent = 'Editar Publicación';
+      document.getElementById('btnSubmitInformacionText').textContent = 'Actualizar Publicación';
+      hideInformacionModalAlert();
+      document.getElementById('informacionModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function handleInformacionContenidoSubmit(event) {
+      event.preventDefault();
+      if (!isAdmin()) {
+        showInformacionModalAlert('Debes ser administrador para publicar información.');
+        return;
+      }
+      if (!supabaseClient) {
+        showInformacionModalAlert('No hay conexión con Supabase.');
+        return;
+      }
+
+      const tipo = document.getElementById('infoInputTipo').value;
+      const titulo = document.getElementById('infoInputTitulo').value.trim();
+      const contenido = document.getElementById('infoInputContenido').value.trim();
+      const activo = true;
+
+      if (!tipo || !titulo || !contenido) {
+        showInformacionModalAlert('Todos los campos son obligatorios.');
+        return;
+      }
+
+      const btnSubmit = document.getElementById('btnSubmitInformacion');
+      btnSubmit.disabled = true;
+      document.getElementById('btnSubmitInformacionText').textContent = 'Guardando...';
+
+      try {
+        const payload = {
+          tipo,
+          titulo,
+          contenido,
+          activo: true,
+          fecha_actualizacion: new Date().toISOString()
+        };
+
+        if (editingInformacionId) {
+          const { error } = await supabaseClient
+            .from('informacion_contenido')
+            .update(payload)
+            .eq('id', editingInformacionId);
+
+          if (error) throw error;
+        } else {
+          payload.created_by = currentUser ? (currentUser.email || currentUser.id) : null;
+          payload.fecha_creacion = new Date().toISOString();
+
+          const { error } = await supabaseClient
+            .from('informacion_contenido')
+            .insert([payload]);
+
+          if (error) throw error;
+        }
+
+        document.getElementById('informacionForm').reset();
+        closeInformacionModal();
+        await fetchInformacionContenido();
+      } catch (err) {
+        console.error('Error guardando publicación:', err);
+        showInformacionModalAlert(err.message || 'Error al guardar la publicación.');
+      } finally {
+        btnSubmit.disabled = false;
+        document.getElementById('btnSubmitInformacionText').textContent = editingInformacionId ? 'Actualizar Publicación' : 'Guardar Publicación';
+      }
+    }
+
+    const handleInformacionSubmit = handleInformacionContenidoSubmit;
+
+    async function deleteInformacionContenido(id) {
+      if (!isAdmin()) {
+        openLoginModal();
+        return;
+      }
+      if (!confirm('¿Deseas desactivar / eliminar esta publicación?')) {
+        return;
+      }
+
+      try {
+        // Desactivar (soft delete) en Supabase: activo = false
+        const { error } = await supabaseClient
+          .from('informacion_contenido')
+          .update({
+            activo: false,
+            fecha_actualizacion: new Date().toISOString()
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+        await fetchInformacionContenido();
+      } catch (err) {
+        console.error('Error al desactivar información:', err);
+        alert('Error al desactivar: ' + (err.message || err));
+      }
+    }
+
+    const deleteInformacion = deleteInformacionContenido;
+
+    function showInformacionModalAlert(msg) {
+      const alertBox = document.getElementById('informacionModalAlert');
+      alertBox.classList.remove('hidden');
+      alertBox.className = 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200';
+      alertBox.innerHTML = `
+        <i data-lucide="alert-octagon" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <span>${escapeHtml(formatErrorMessage(msg))}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function hideInformacionModalAlert() {
+      const alertBox = document.getElementById('informacionModalAlert');
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML = '';
     }
 
   </script>
