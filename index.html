@@ -1389,13 +1389,13 @@
   <!-- MODAL DE INSCRIBIR CORRAL A EVENTO         -->
   <!-- ========================================== -->
   <div id="inscribirModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+    <div id="inscribirCorralModal" class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
           <i data-lucide="user-plus" class="w-6 h-6 text-cyan-400"></i>
           <h3 class="text-lg sm:text-xl font-bold text-white">Inscribir Corral</h3>
         </div>
-        <button onclick="closeInscribirModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
+        <button onclick="closeInscribirCorralModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition touch-btn">
           <i data-lucide="x" class="w-6 h-6"></i>
         </button>
       </div>
@@ -1408,7 +1408,7 @@
         <p id="inscribirEventoFecha" class="text-xs text-slate-400"></p>
       </div>
 
-      <form id="inscribirForm" onsubmit="handleInscribirSubmit(event)" class="space-y-4">
+      <form id="inscribirForm" onsubmit="handleInscribirCorral(event)" class="space-y-4">
         <input type="hidden" id="inscribirEventoId" />
         
         <div>
@@ -1425,6 +1425,21 @@
           <p class="text-[11px] text-slate-400 mt-1">El corral debe estar registrado en el sistema.</p>
         </div>
 
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            Cantidad de Personas <span class="text-rose-400">*</span>
+          </label>
+          <input
+            type="number"
+            id="inscribirCantidadPersonas"
+            min="1"
+            value="1"
+            required
+            placeholder="Ej: 2"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+          />
+        </div>
+
         <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
           <button
             type="button"
@@ -1439,7 +1454,7 @@
             class="touch-btn w-full sm:w-2/3 py-3 px-4 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-cyan-950/60 transition flex items-center justify-center gap-2"
           >
             <i data-lucide="check" class="w-4 h-4"></i>
-            <span>Confirmar Inscripción</span>
+            <span id="btnSubmitInscribirText">Confirmar Inscripción</span>
           </button>
         </div>
       </form>
@@ -1553,9 +1568,7 @@
     let supabaseClient = null;
     let realtimeAvesChannel = null;
     let realtimeCorralesChannel = null;
-    let realtimeCalendarioChannel = null;
     let realtimeInscripcionesChannel = null;
-    let realtimeInformacionChannel = null;
 
     let avesData = [];             // Fuente de verdad de aves
     let corralesData = [];         // Fuente de verdad de corrales
@@ -1565,9 +1578,10 @@
     let editingPlaca = null;       // Modo edición si contiene la placa
     let currentUser = null;        // Usuario autenticado (administrador)
 
-    // Variables de Estado de Calendario e Información
     let calendarioEventosData = [];
     let informacionContenidoData = [];
+    let realtimeCalendarioChannel = null;
+    let realtimeInformacionChannel = null;
     let inscripcionesData = [];    // Lista de inscripciones (calendario_inscripciones)
     let editingEventoId = null;    // ID del evento en edición
     let editingInformacionId = null;// ID de la publicación en edición
@@ -4785,21 +4799,31 @@
               ` : `
                 <div class="flex flex-wrap gap-2 pt-1">
                   ${eventoInscripciones.map(ins => {
-                    const corral = corralesData.find(c => String(c.id) === String(ins.corral_id));
-                    const corralNombre = corral ? corral.nombre : `Corral #${ins.corral_id}`;
+                    let corralNombre = `Corral #${ins.corral_id}`;
+                    if (corralesData && corralesData.length > 0) {
+                      const found = corralesData.find(c => String(c.id) === String(ins.corral_id));
+                      if (found && found.nombre) corralNombre = found.nombre;
+                    }
+                    if (corralNombre.startsWith('Corral #') && typeof getCorralesList === 'function') {
+                      const names = getCorralesList();
+                      const fallbackIdx = parseInt(ins.corral_id, 10) - 1000;
+                      if (!isNaN(fallbackIdx) && names[fallbackIdx]) {
+                        corralNombre = names[fallbackIdx];
+                      }
+                    }
+                    const personasLabel = ins.cantidad_personas ? ` (${ins.cantidad_personas} ${ins.cantidad_personas === 1 ? 'persona' : 'personas'})` : '';
+                    const inscritoPor = ins.created_by ? `Inscrito por: ${ins.created_by}` : '';
                     return `
-                      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 shadow-sm">
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 shadow-sm" ${inscritoPor ? `title="${escapeHtml(inscritoPor)}"` : ''}>
                         <i data-lucide="shield" class="w-3 h-3 text-cyan-400"></i>
-                        <span>${escapeHtml(corralNombre)}</span>
-                        ${isAdmin() ? `
-                          <button
-                            onclick="deleteInscripcion('${escapeHtml(ins.id)}')"
-                            class="ml-1 text-slate-500 hover:text-rose-400 transition"
-                            title="Quitar inscripción"
-                          >
-                            <i data-lucide="x" class="w-3 h-3"></i>
-                          </button>
-                        ` : ''}
+                        <span>${escapeHtml(corralNombre)}<b class="text-cyan-400/90 font-semibold">${escapeHtml(personasLabel)}</b></span>
+                        <button
+                          onclick="deleteInscripcionCorral('${escapeHtml(ins.id)}')"
+                          class="ml-1 text-slate-400 hover:text-rose-400 transition p-0.5 rounded touch-btn"
+                          title="Quitar inscripción"
+                        >
+                          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
                       </span>
                     `;
                   }).join('')}
@@ -4968,7 +4992,7 @@
       }
     }
 
-    const handleEventoSubmit = handleCalendarioEventoSubmit;
+    window.handleEventoSubmit = handleCalendarioEventoSubmit;
 
     async function deleteCalendarioEvento(id) {
       if (!isAdmin()) {
@@ -4993,7 +5017,7 @@
       }
     }
 
-    const deleteEvento = deleteCalendarioEvento;
+    window.deleteEvento = deleteCalendarioEvento;
 
     function showEventoModalAlert(msg) {
       const alertBox = document.getElementById('eventoModalAlert');
@@ -5012,27 +5036,58 @@
       alertBox.innerHTML = '';
     }
 
-    // INSCRIPCIONES
-    function openInscribirModal(eventoId) {
-      const evento = eventosData.find(e => String(e.id) === String(eventoId));
-      if (!evento) return;
+    // =========================================================================
+    // GESTIÓN DE INSCRIPCIONES (calendario_inscripciones)
+    // =========================================================================
+
+    function openInscribirCorralModal(eventoId) {
+      const eventosList = eventosData && eventosData.length > 0 ? eventosData : (calendarioEventosData || []);
+      const evento = eventosList.find(e => String(e.id) === String(eventoId));
+      if (!evento) {
+        alert('Evento no encontrado.');
+        return;
+      }
 
       document.getElementById('inscribirEventoId').value = evento.id;
-      document.getElementById('inscribirEventoNombre').textContent = evento.nombre;
+      document.getElementById('inscribirEventoNombre').textContent = evento.nombre || 'Evento';
       document.getElementById('inscribirEventoFecha').textContent = formatDateRange(evento.fecha_inicio, evento.fecha_fin);
 
-      // Poblar selector con corrales
-      const select = document.getElementById('inscribirSelectCorral');
-      const yaInscritos = inscripcionesData
+      // Reiniciar cantidad de personas a 1 por defecto
+      const inputCant = document.getElementById('inscribirCantidadPersonas') || document.getElementById('inputCantidadPersonas');
+      if (inputCant) inputCant.value = '1';
+
+      // Poblar selector con corrales registrados (de corralesData o de avesData/getCorralesList)
+      const select = document.getElementById('inscribirSelectCorral') || document.getElementById('selectCorralModal');
+      const yaInscritos = (inscripcionesData || [])
         .filter(i => String(i.evento_id) === String(evento.id))
         .map(i => String(i.corral_id));
 
-      if (corralesData.length === 0) {
-        select.innerHTML = '<option value="">-- No hay corrales registrados --</option>';
+      const availableCorrales = [];
+      const addedNames = new Set();
+
+      // 1. Agregar desde corralesData (si tienen ID)
+      (corralesData || []).forEach(c => {
+        if (c.nombre && c.nombre.trim()) {
+          availableCorrales.push({ id: c.id, nombre: c.nombre.trim() });
+          addedNames.add(c.nombre.trim());
+        }
+      });
+
+      // 2. Agregar cualquier otro corral presente en avesData
+      const allNames = typeof getCorralesList === 'function' ? getCorralesList() : [];
+      allNames.forEach((name, index) => {
+        if (!addedNames.has(name) && name !== 'Sin Corral') {
+          availableCorrales.push({ id: index + 1000, nombre: name });
+          addedNames.add(name);
+        }
+      });
+
+      if (availableCorrales.length === 0) {
+        select.innerHTML = '<option value="">-- No hay corrales registrados en el sistema --</option>';
       } else {
         select.innerHTML = `
           <option value="">-- Selecciona un Corral --</option>
-          ${corralesData.map(c => {
+          ${availableCorrales.map(c => {
             const isAlready = yaInscritos.includes(String(c.id));
             return `<option value="${escapeHtml(c.id)}" ${isAlready ? 'disabled' : ''}>
               ${escapeHtml(c.nombre)} ${isAlready ? '(Ya inscrito)' : ''}
@@ -5046,38 +5101,70 @@
       lucide.createIcons();
     }
 
+    window.openInscribirCorralModal = openInscribirCorralModal;
+    window.openInscribirModal = openInscribirCorralModal;
+
     function closeInscribirModal() {
       document.getElementById('inscribirModal').classList.add('hidden');
     }
+    window.closeInscribirModal = closeInscribirModal;
+    window.closeInscribirCorralModal = closeInscribirModal;
 
-    async function handleInscribirSubmit(event) {
-      event.preventDefault();
+    async function handleInscribirCorral(event) {
+      if (event && event.preventDefault) event.preventDefault();
+
       if (!supabaseClient) {
         showInscribirModalAlert('No hay conexión con Supabase.');
         return;
       }
 
       const evento_id = document.getElementById('inscribirEventoId').value;
-      const corral_id = document.getElementById('inscribirSelectCorral').value;
+      const selectCorral = document.getElementById('inscribirSelectCorral') || document.getElementById('selectCorralModal');
+      const inputPersonas = document.getElementById('inscribirCantidadPersonas') || document.getElementById('inputCantidadPersonas');
 
-      if (!evento_id || !corral_id) {
+      const rawCorralId = selectCorral ? selectCorral.value : null;
+      const cantidadPersonas = inputPersonas ? parseInt(inputPersonas.value, 10) : 1;
+
+      if (!evento_id || !rawCorralId) {
         showInscribirModalAlert('Debes seleccionar un corral válido.');
         return;
       }
 
+      if (isNaN(cantidadPersonas) || cantidadPersonas <= 0) {
+        showInscribirModalAlert('Ingresa una cantidad válida de personas (mínimo 1).');
+        return;
+      }
+
       const btnSubmit = document.getElementById('btnSubmitInscribir');
-      btnSubmit.disabled = true;
+      const btnText = document.getElementById('btnSubmitInscribirText');
+      if (btnSubmit) btnSubmit.disabled = true;
+      if (btnText) btnText.textContent = 'Inscribiendo...';
 
       try {
+        const parsedId = isNaN(rawCorralId) ? rawCorralId : parseInt(rawCorralId, 10);
         const payload = {
           evento_id: evento_id,
-          corral_id: parseInt(corral_id, 10),
+          corral_id: parsedId,
+          cantidad_personas: cantidadPersonas,
+          created_by: currentUser ? (currentUser.email || currentUser.id) : null,
           creado_en: new Date().toISOString()
         };
 
-        const { error } = await supabaseClient
+        // Intentar inserción en Supabase
+        let { error } = await supabaseClient
           .from('calendario_inscripciones')
           .insert([payload]);
+
+        // Si falla por columnas opcionales inexistentes (cantidad_personas o created_by), reintentar sin ellas
+        if (error && (error.code === '42703' || (error.message && (error.message.includes('cantidad_personas') || error.message.includes('created_by'))))) {
+          console.warn("Columna no detectada en Supabase, reintentando con campos básicos...");
+          delete payload.cantidad_personas;
+          delete payload.created_by;
+          const retryRes = await supabaseClient
+            .from('calendario_inscripciones')
+            .insert([payload]);
+          error = retryRes.error;
+        }
 
         if (error) {
           if (error.code === '23505') {
@@ -5087,21 +5174,53 @@
         }
 
         closeInscribirModal();
-        await fetchCalendarioInscripciones();
+        await fetchCorralesInscritos();
       } catch (err) {
         console.error('Error al inscribir corral:', err);
         showInscribirModalAlert(err.message || 'Error al inscribir corral.');
       } finally {
-        btnSubmit.disabled = false;
+        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnText) btnText.textContent = 'Confirmar Inscripción';
       }
     }
 
-    async function deleteInscripcion(inscripcionId) {
-      if (!isAdmin()) {
-        openLoginModal();
-        return;
+    window.handleInscribirCorral = handleInscribirCorral;
+    window.handleInscribirSubmit = handleInscribirCorral;
+
+    async function fetchCorralesInscritos(eventoId = null) {
+      if (!supabaseClient) return;
+      try {
+        let query = supabaseClient
+          .from('calendario_inscripciones')
+          .select('*')
+          .order('creado_en', { ascending: true });
+
+        if (eventoId) {
+          query = query.eq('evento_id', eventoId);
+        }
+
+        const { data, error } = await query;
+
+        if (!error && data) {
+          if (eventoId) {
+            inscripcionesData = inscripcionesData.filter(i => String(i.evento_id) !== String(eventoId)).concat(data);
+          } else {
+            inscripcionesData = data;
+          }
+          renderCalendario();
+        } else if (error) {
+          console.warn("Aviso al cargar inscripciones:", error.message);
+        }
+      } catch (err) {
+        console.warn("Error al cargar inscripciones:", err);
       }
-      if (!confirm('¿Confirmas que deseas cancelar esta inscripción?')) {
+    }
+
+    window.fetchCorralesInscritos = fetchCorralesInscritos;
+    window.fetchCalendarioInscripciones = fetchCorralesInscritos;
+
+    async function deleteInscripcionCorral(inscripcionId) {
+      if (!confirm('¿Confirmas que deseas cancelar / desinscribir este corral?')) {
         return;
       }
 
@@ -5112,7 +5231,7 @@
           .eq('id', inscripcionId);
 
         if (error) throw error;
-        inscripcionesData = inscripcionesData.filter(i => String(i.id) !== String(inscripcionId));
+        inscripcionesData = (inscripcionesData || []).filter(i => String(i.id) !== String(inscripcionId));
         renderCalendario();
       } catch (err) {
         console.error('Error al eliminar inscripción:', err);
@@ -5120,8 +5239,13 @@
       }
     }
 
+    const deleteInscripcion = deleteInscripcionCorral;
+    window.deleteInscripcionCorral = deleteInscripcionCorral;
+    window.deleteInscripcion = deleteInscripcion;
+
     function showInscribirModalAlert(msg) {
       const alertBox = document.getElementById('inscribirModalAlert');
+      if (!alertBox) return;
       alertBox.classList.remove('hidden');
       alertBox.className = 'p-3.5 rounded-xl text-sm flex items-start gap-2.5 bg-rose-950/80 border border-rose-700/60 text-rose-200';
       alertBox.innerHTML = `
@@ -5133,6 +5257,7 @@
 
     function hideInscribirModalAlert() {
       const alertBox = document.getElementById('inscribirModalAlert');
+      if (!alertBox) return;
       alertBox.classList.add('hidden');
       alertBox.innerHTML = '';
     }
@@ -5377,7 +5502,7 @@
       }
     }
 
-    const handleInformacionSubmit = handleInformacionContenidoSubmit;
+    window.handleInformacionSubmit = handleInformacionContenidoSubmit;
 
     async function deleteInformacionContenido(id) {
       if (!isAdmin()) {
@@ -5406,7 +5531,7 @@
       }
     }
 
-    const deleteInformacion = deleteInformacionContenido;
+    window.deleteInformacion = deleteInformacionContenido;
 
     function showInformacionModalAlert(msg) {
       const alertBox = document.getElementById('informacionModalAlert');
@@ -5421,6 +5546,7 @@
 
     function hideInformacionModalAlert() {
       const alertBox = document.getElementById('informacionModalAlert');
+      if (!alertBox) return;
       alertBox.classList.add('hidden');
       alertBox.innerHTML = '';
     }
