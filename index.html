@@ -2095,7 +2095,8 @@
     
     // Variables de Estado de Cámara y Foto
     let currentCameraStream = null;  // Stream en vivo de MediaStream
-    let selectedPhotoBlob = null;    // Blob final listo para subir a Supabase
+    let selectedPhotoBlob = null;    // Blob final listo para subir a Supabase (foto 1)
+    let selectedPhotoBlob2 = null;   // Blob final listo para subir a Supabase (foto 2)
     let capturedTempBlob = null;     // Blob temporal en la vista previa del modal de cámara
     let currentAvePhotoUrl = null;   // URL de la foto 1 existente en edición
     let currentAvePhotoUrl2 = null;  // URL de la foto 2 existente en edición
@@ -2356,7 +2357,7 @@
         openLoginModal();
         return;
       }
-      
+      currentPhotoMode = 1;
       hideCameraAlert();
       resetCameraModalState();
       document.getElementById('cameraModal').classList.remove('hidden');
@@ -2563,13 +2564,20 @@
 
     function confirmCapturedPhoto() {
       if (!capturedTempBlob) return;
-      selectedPhotoBlob = capturedTempBlob;
-      currentAvePhotoUrl = null;
 
-      // Actualizar vista previa en el formulario de Ave
-      const previewImg = document.getElementById('photoPreviewImg');
-      previewImg.src = URL.createObjectURL(capturedTempBlob);
-      setPhotoPreview(previewImg.src);
+      if (currentPhotoMode === 1) {
+        selectedPhotoBlob = capturedTempBlob;
+        currentAvePhotoUrl = null;
+        const previewImg = document.getElementById('photoPreviewImg');
+        previewImg.src = URL.createObjectURL(capturedTempBlob);
+        setPhotoPreview(previewImg.src);
+      } else if (currentPhotoMode === 2) {
+        selectedPhotoBlob2 = capturedTempBlob;
+        currentAvePhotoUrl2 = null;
+        const previewImg2 = document.getElementById('photoPreviewImg2');
+        previewImg2.src = URL.createObjectURL(capturedTempBlob);
+        setPhotoPreview2(previewImg2.src);
+      }
 
       // Detener cámara y cerrar modal
       stopCameraStream();
@@ -3583,9 +3591,12 @@
       document.getElementById('inputPlacaHelp').textContent = 'Identificador único irrepetible.';
 
       removePhoto();
+      removePhoto2();
       populateModalCorralSelect('');
       document.getElementById('inputColorPatas').value = '';
       document.getElementById('inputTipoCresta').value = '';
+      document.getElementById('inputObservaciones').value = '';
+      currentPhotoMode = 1;
       
       // Sugerir fecha de hoy
       document.getElementById('inputFechaMarcaje').value = new Date().toISOString().split('T')[0];
@@ -3600,6 +3611,8 @@
       document.getElementById('aveModal').classList.add('hidden');
       editingPlaca = null;
       removePhoto();
+      removePhoto2();
+      currentPhotoMode = 1;
     }
 
     function startEdit(placa) {
@@ -3629,6 +3642,16 @@
       } else {
         removePhoto();
       }
+
+      if (ave.foto_url_2) {
+        currentAvePhotoUrl2 = ave.foto_url_2;
+        setPhotoPreview2(ave.foto_url_2);
+      } else {
+        removePhoto2();
+      }
+
+      document.getElementById('inputObservaciones').value = ave.observaciones || '';
+      document.getElementById('inputMarca').value = ave.marca || '';
 
       document.getElementById('modalTitle').textContent = 'Editar Registro';
       document.getElementById('btnSubmitText').textContent = 'Actualizar Ave';
@@ -3663,10 +3686,11 @@
 
       try {
         let fotoUrl = currentAvePhotoUrl;
+        let fotoUrl2 = currentAvePhotoUrl2;
 
         // Si se tomó una foto nueva con la cámara, subirla a Supabase Storage (bucket fotos-aves)
-        if (selectedPhotoBlob) {
-          document.getElementById('btnSubmitText').textContent = 'Subiendo fotografía...';
+        if (selectedPhotoBlob && currentPhotoMode === 1) {
+          document.getElementById('btnSubmitText').textContent = 'Subiendo fotografía 1...';
           const safePlaca = placa.replace(/[^a-zA-Z0-9_-]/g, '_');
           const filePath = `${safePlaca}_${Date.now()}.jpg`;
 
@@ -3691,6 +3715,33 @@
           fotoUrl = publicUrl;
         }
 
+        // Si se tomó una foto 2 nueva con la cámara, subirla a Supabase Storage (bucket fotos-aves)
+        if (selectedPhotoBlob2) {
+          document.getElementById('btnSubmitText').textContent = 'Subiendo fotografía 2...';
+          const safePlaca = placa.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const filePath = `${safePlaca}_2_${Date.now()}.jpg`;
+
+          const { error: uploadError } = await supabaseClient
+            .storage
+            .from('fotos-aves')
+            .upload(filePath, selectedPhotoBlob2, {
+              upsert: true,
+              contentType: 'image/jpeg'
+            });
+
+          if (uploadError) {
+            console.warn("Aviso al subir foto 2 a Storage:", uploadError);
+            throw new Error(`Error al subir foto 2: ${uploadError.message}. Asegúrate de que el bucket 'fotos-aves' existe y tiene permisos en Supabase.`);
+          }
+
+          const { data: { publicUrl } } = supabaseClient
+            .storage
+            .from('fotos-aves')
+            .getPublicUrl(filePath);
+
+          fotoUrl2 = publicUrl;
+        }
+
         const inputMarca = document.getElementById('inputMarca');
         const marca = inputMarca && inputMarca.value ? parseInt(inputMarca.value, 10) : null;
 
@@ -3704,7 +3755,9 @@
           corral: document.getElementById('inputCorral').value.trim() || null,
           color_patas: document.getElementById('inputColorPatas').value.trim() || null,
           tipo_cresta: document.getElementById('inputTipoCresta').value.trim() || null,
-          foto_url: fotoUrl || null
+          foto_url: fotoUrl || null,
+          foto_url_2: fotoUrl2 || null,
+          observaciones: document.getElementById('inputObservaciones').value.trim() || null
         };
 
         if (editingPlaca) {
@@ -3730,6 +3783,9 @@
           }
           closeAveModal();
         }
+        // Resetear blobs después de guardar
+        selectedPhotoBlob = null;
+        selectedPhotoBlob2 = null;
       } catch (err) {
         console.error("Error en operación CRUD:", err);
         showModalAlert(err.message || 'Error al guardar el registro.', 'error');
