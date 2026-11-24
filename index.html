@@ -1488,8 +1488,15 @@
           <i data-lucide="x" class="w-6 h-6"></i>
         </button>
       </div>
-      <div class="w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[80vh]">
-        <img id="lightboxImg" src="" alt="Foto de ave" class="w-auto h-auto max-h-[80vh] max-w-full object-contain rounded-2xl" />
+      <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- Foto 1 -->
+        <div class="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[60vh]">
+          <img id="lightboxImg" src="" alt="Foto 1 de ave" class="w-auto h-auto max-h-[60vh] max-w-full object-contain rounded-2xl" />
+        </div>
+        <!-- Foto 2 -->
+        <div id="lightboxImg2Container" class="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[60vh]">
+          <img id="lightboxImg2" src="" alt="Foto 2 de ave" class="w-auto h-auto max-h-[60vh] max-w-full object-contain rounded-2xl" />
+        </div>
       </div>
       <div class="w-full grid grid-cols-2 gap-2 pt-3 px-2">
         <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-2">
@@ -2649,9 +2656,11 @@
       }
     }
 
-    function openImageLightbox(url, placa, marca = '-', fechaMarcaje = '-', colorPatas = '-', tipoCresta = '-', observaciones = '-') {
+    function openImageLightbox(url, placa, marca = '-', fechaMarcaje = '-', colorPatas = '-', tipoCresta = '-', observaciones = '-', url2 = null) {
       const modal = document.getElementById('imageLightboxModal');
       const img = document.getElementById('lightboxImg');
+      const img2 = document.getElementById('lightboxImg2');
+      const img2Container = document.getElementById('lightboxImg2Container');
       const title = document.getElementById('lightboxPlacaTitle');
       const marcaEl = document.getElementById('lightboxMarca');
       const fechaEl = document.getElementById('lightboxFechaMarcaje');
@@ -2661,6 +2670,15 @@
       if (!modal || !img || !title) return;
 
       img.src = url;
+
+      // Mostrar segunda foto si existe
+      if (url2) {
+        img2.src = url2;
+        img2Container.classList.remove('hidden');
+      } else {
+        img2Container.classList.add('hidden');
+      }
+
       title.textContent = `Placa: ${placa}`;
       if (marcaEl) marcaEl.textContent = marca ? `M${marca}` : '-';
       if (fechaEl) fechaEl.textContent = fechaMarcaje || '-';
@@ -3343,15 +3361,22 @@
                 <div class="p-4 bg-emerald-950/30 border-2 border-emerald-600/50 rounded-xl space-y-3">
                   <div class="flex items-center justify-between border-b border-emerald-800/40 pb-2 gap-2">
                     <div class="flex items-center gap-2.5">
-                      ${ave.foto_url ? `
-                        <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shrink-0 hover:border-emerald-400 transition group cursor-pointer" title="Ver foto en grande">
-                          <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
-                        </button>
-                      ` : `
-                        <div class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
-                          <i data-lucide="feather" class="w-5 h-5"></i>
-                        </div>
-                      `}
+                      <div class="flex gap-1">
+                        ${ave.foto_url ? `
+                          <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}', '${escapeHtml(ave.foto_url_2 || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shrink-0 hover:border-emerald-400 transition group cursor-pointer" title="Ver fotos">
+                            <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)} - Foto 1" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                          </button>
+                        ` : `
+                          <div class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
+                            <i data-lucide="feather" class="w-5 h-5"></i>
+                          </div>
+                        `}
+                        ${ave.foto_url_2 ? `
+                          <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url_2)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}', '${escapeHtml(ave.foto_url || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-blue-500/40 bg-slate-900 shrink-0 hover:border-blue-400 transition group cursor-pointer" title="Ver fotos">
+                            <img src="${escapeHtml(ave.foto_url_2)}" alt="${escapeHtml(ave.placa)} - Foto 2" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                          </button>
+                        ` : ''}
+                      </div>
                       <div>
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-lg font-black font-mono text-emerald-400 tracking-wider block leading-tight">${escapeHtml(ave.placa)}</span>
@@ -3370,10 +3395,14 @@
                   </div>
 
                   <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-0.5">
+                    <div><span class="text-slate-500 block">Marca:</span> <b class="text-slate-200">${ave.marca || '-'}</b></div>
                     <div><span class="text-slate-500 block">F. Marcaje:</span> <b class="text-slate-200">${ave.fecha_marcaje || '-'}</b></div>
                     <div><span class="text-slate-500 block">F. Nacimiento:</span> <b class="text-slate-200">${ave.fecha_nacimiento || '-'}</b></div>
+                    <div><span class="text-slate-500 block">Color Patas:</span> <b class="text-slate-200">${ave.color_patas || '-'}</b></div>
+                    <div><span class="text-slate-500 block">Tipo Cresta:</span> <b class="text-slate-200">${ave.tipo_cresta || '-'}</b></div>
                     <div><span class="text-slate-500 block">Responsable:</span> <b class="text-slate-200">${escapeHtml(ave.responsable || '-')}</b></div>
                     <div><span class="text-slate-500 block">Ubicación:</span> <b class="text-slate-200">${escapeHtml(ave.comuna || '-')}${ave.corral ? ' / ' + escapeHtml(ave.corral) : ''}</b></div>
+                    ${ave.observaciones ? `<div class="col-span-2"><span class="text-slate-500 block">Observaciones:</span> <b class="text-slate-200">${escapeHtml(ave.observaciones)}</b></div>` : ''}
                   </div>
 
                   <!-- Historial de Baloteo y Torneos del Ave -->
@@ -3516,16 +3545,23 @@
             <div class="bg-slate-950 border border-slate-800 hover:border-slate-700 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-md">
               <div class="space-y-2">
                 <div class="flex items-start justify-between gap-2">
-                  <div class="flex items-center gap-2.5">
-                    ${ave.foto_url ? `
-                      <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 shrink-0 hover:border-emerald-500 transition group cursor-pointer" title="Ver foto en grande">
-                        <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
-                      </button>
-                    ` : `
-                      <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
-                        <i data-lucide="feather" class="w-5 h-5 text-slate-600"></i>
-                      </div>
-                    `}
+                  <div class="flex items-center gap-2">
+                    <div class="flex gap-1">
+                      ${ave.foto_url ? `
+                        <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}', '${escapeHtml(ave.foto_url_2 || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 shrink-0 hover:border-emerald-500 transition group cursor-pointer" title="Ver fotos">
+                          <img src="${escapeHtml(ave.foto_url)}" alt="${escapeHtml(ave.placa)} - Foto 1" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                        </button>
+                      ` : `
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                          <i data-lucide="feather" class="w-5 h-5 text-slate-600"></i>
+                        </div>
+                      `}
+                      ${ave.foto_url_2 ? `
+                        <button type="button" onclick="openImageLightbox('${escapeHtml(ave.foto_url_2)}', '${escapeHtml(ave.placa)}', '${escapeHtml(ave.marca || '')}', '${escapeHtml(ave.fecha_marcaje || '')}', '${escapeHtml(ave.color_patas || '')}', '${escapeHtml(ave.tipo_cresta || '')}', '${escapeHtml(ave.observaciones || '')}', '${escapeHtml(ave.foto_url || '')}')" class="relative w-12 h-12 rounded-xl overflow-hidden border border-blue-700 bg-slate-900 shrink-0 hover:border-blue-500 transition group cursor-pointer" title="Ver fotos">
+                          <img src="${escapeHtml(ave.foto_url_2)}" alt="${escapeHtml(ave.placa)} - Foto 2" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                        </button>
+                      ` : ''}
+                    </div>
                     <div>
                       <span class="text-lg font-bold font-mono text-emerald-400 uppercase tracking-wide block leading-tight">
                         ${escapeHtml(ave.placa)}
