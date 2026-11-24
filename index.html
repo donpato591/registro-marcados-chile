@@ -3725,7 +3725,7 @@
         let fotoUrl2 = currentAvePhotoUrl2;
 
         // Si se tomó una foto nueva con la cámara, subirla a Supabase Storage (bucket fotos-aves)
-        if (selectedPhotoBlob && currentPhotoMode === 1) {
+        if (selectedPhotoBlob) {
           document.getElementById('btnSubmitText').textContent = 'Subiendo fotografía 1...';
           const safePlaca = placa.replace(/[^a-zA-Z0-9_-]/g, '_');
           const filePath = `${safePlaca}_${Date.now()}.jpg`;
